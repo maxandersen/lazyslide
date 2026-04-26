@@ -1,0 +1,8 @@
+{
+  "aliases": {
+    "lazyslide": {
+      "script-ref": "lazyslide.java",
+      "description": "lazyslide: render, serve, watch, and initialize AsciiDoc reveal.js decks"
+    }
+  }
+}

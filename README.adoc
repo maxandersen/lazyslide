@@ -1,0 +1,204 @@
+= lazyslide
+:author: Max Rydahl Andersen
+:icons: font
+:source-highlighter: highlightjs
+:highlightjs-theme: https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css
+:highlightjs-languages: bash
+:revealjs_theme: black
+:revealjs_transition: slide
+:revealjs_hash: true
+:revealjs_history: true
+
+[%notitle]
+== lazyslide
+
+[.lead]
+A small JBang tool for writing presentations in AsciiDoc and rendering them to reveal.js.
+
+== What it does
+
+- Render a deck from `index.adoc` or a directory of `.adoc` files
+- Watch source files and re-render on change
+- Serve the output locally
+- Show a Tamboui Toolkit dashboard while working
+- Bootstrap new talks with `lazyslide init`
+
+== Render this repo's deck
+
+[source,bash]
+----
+./jbang lazyslide/lazyslide.java render
+----
+
+Render a specific entrypoint:
+
+[source,bash]
+----
+./jbang lazyslide/lazyslide.java render index.adoc
+----
+
+Render a directory of `.adoc` files:
+
+[source,bash]
+----
+./jbang lazyslide/lazyslide.java render docs/
+----
+
+== Live preview
+
+[source,bash]
+----
+./jbang lazyslide/lazyslide.java serve
+----
+
+That will:
+
+- render the deck
+- watch source files
+- serve the output over HTTP
+- open the browser on demand
+- show the TamboUI dashboard
+
+== Bootstrap a new presentation
+
+[source,bash]
+----
+./jbang lazyslide/lazyslide.java init ../my-talk --title "My Talk" --author "Your Name"
+----
+
+Generated starter decks include:
+
+- `README.adoc`
+- `index.adoc`
+- `slides/`
+- `css/presentation.css`
+- `images/`
+- `docinfo-footer.html`
+- `.gitignore`
+
+== Directory scanning
+
+When you pass a directory instead of a file, lazyslide scans it recursively for `.adoc` files and generates a virtual `index.adoc` that includes them all.
+
+If no argument is given, it looks for a `slides/` directory first, then `docs/`.
+
+=== File ordering
+
+Files are included in *lexicographic* (alphabetical string) order by relative path.
+This means `c10.adoc` sorts *before* `c2.adoc` because `'1' < '2'` character-by-character.
+
+Use zero-padded numbers to get the order you expect:
+
+[source]
+----
+docs/
+├── 00-intro.adoc       # first
+├── 01-basics.adoc      # second
+├── 02-advanced.adoc    # third
+├── 10-appendix.adoc    # tenth
+----
+
+=== What gets included
+
+Any `.adoc` file whose name does *not* start with `.` or `_`.
+
+=== What gets excluded
+
+- Files starting with `.` (hidden) or `_` (AsciiDoc partial convention)
+- Files inside hidden directories (`.git/`, `.asciidoctor/`, etc.)
+- Files inside the output directory
+
+Use the `_` prefix for reusable fragments that are included manually from other files but should not become their own section in the generated deck.
+
+=== Default attributes
+
+The virtual index sets sensible defaults for reveal.js slides:
+
+[source,asciidoc]
+----
+:icons: font
+:source-highlighter: highlightjs
+:revealjs_theme: black
+:revealjs_transition: slide
+:stem: latexmath
+:revealjs_hash: true
+:revealjs_history: true
+:revealjs_width: 1920
+:revealjs_height: 1080
+----
+
+=== Overriding defaults with an attributes file
+
+To override these defaults for the whole deck, create an attributes file in the source directory.
+lazyslide looks for the first one that exists, in this order:
+
+. `_lazyslide_attributes.adoc` — lazyslide-specific, won't clash with other tools
+. `_attributes.adoc` — generic convention
+. `attributes.adoc` — simple name (note: no `_` prefix, so excluded from slide scanning by name match)
+
+The file is loaded as soft-set attributes at render time, so it overrides lazyslide's defaults but individual `.adoc` files can still override per-file:
+
+[source]
+----
+docs/
+├── _attributes.adoc    # project-wide overrides
+├── 00-intro.adoc
+├── 01-main.adoc
+----
+
+Example:
+
+[source,asciidoc]
+----
+:revealjs_theme: white
+:revealjs_transition: fade
+:imagesdir: img
+----
+
+=== Attribute precedence
+
+From lowest to highest:
+
+. lazyslide built-in defaults
+. `_attributes.adoc` (project-wide overrides)
+. Per-file inline attributes (e.g. `:imagesdir: ../img` in a subdirectory file)
+
+This works for both directory mode and single-file mode — lazyslide looks for `_attributes.adoc` next to the source file or in the scanned directory.
+
+== Project structure
+
+- `lazyslide.java` — the tool itself
+- `jbang-catalog.json` — alias metadata for `lazyslide`
+- `README.adoc` — this document, readable as text or renderable as slides
+
+== Render this README as slides
+
+[source,bash]
+----
+./jbang lazyslide/lazyslide.java lazyslide/README.adoc
+----
+
+Or from inside `lazyslide/`:
+
+[source,bash]
+----
+../jbang lazyslide.java README.adoc
+----
+
+== Short-name setup
+
+Because the script file is named `lazyslide.java`, the command name is simply `lazyslide`.
+You can also expose it through a JBang alias or catalog entry using `jbang-catalog.json`.
+
+== Why AsciiDoc for a README?
+
+- The file is still readable in plain text
+- It doubles as a small slide deck
+- The same authoring style is used for docs and talks
+- It demonstrates the tool using the tool
+
+== Next steps
+
+- tune the TUI layout further
+- add publishing helpers
+- add PDF export workflows
