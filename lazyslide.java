@@ -15,15 +15,17 @@
 //DEPS info.picocli:picocli:4.6.3
 //DEPS dev.tamboui:tamboui-toolkit:LATEST
 //DEPS dev.tamboui:tamboui-jline3-backend:LATEST
+//DEPS io.vertx:vertx-web:4.5.13
 
-import com.sun.net.httpserver.HttpServer;
-import com.sun.net.httpserver.SimpleFileServer;
-import dev.tamboui.layout.Constraint;
-import dev.tamboui.style.Color;
-import dev.tamboui.toolkit.app.ToolkitApp;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.http.ServerWebSocket;
+
+import dev.tamboui.toolkit.app.InlineApp;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.tui.TuiConfig;
+import dev.tamboui.tui.InlineTuiConfig;
 import dev.tamboui.text.Emoji;
 import org.asciidoctor.Asciidoctor;
 import org.asciidoctor.Attributes;
@@ -45,8 +47,8 @@ import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.net.InetSocketAddress;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -65,7 +67,9 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -74,11 +78,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static dev.tamboui.toolkit.Toolkit.column;
-import static dev.tamboui.toolkit.Toolkit.dock;
 import static dev.tamboui.toolkit.Toolkit.markupText;
-import static dev.tamboui.toolkit.Toolkit.panel;
 import static dev.tamboui.toolkit.Toolkit.row;
-import static dev.tamboui.toolkit.Toolkit.spacer;
 import static dev.tamboui.toolkit.Toolkit.text;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
@@ -125,15 +126,19 @@ public class lazyslide implements Runnable {
     private volatile Asciidoctor asciidoctor;
     private volatile boolean asciidoctorReady;
     private WatchService watchService;
+    private Vertx vertx;
     private HttpServer httpServer;
+    private final Set<ServerWebSocket> wsClients = ConcurrentHashMap.newKeySet();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(Thread.ofVirtual().name("lazyslide-scheduler", 0).factory());
-    private final ConcurrentLinkedQueue<String> statusMessages = new ConcurrentLinkedQueue<>();
+    private volatile DashboardApp tuiApp;
+    private volatile String[] pendingEditorCmd = null;
+    private final ConcurrentLinkedQueue<String> pendingMarkup = new ConcurrentLinkedQueue<>();
     private final LinkedHashSet<String> pendingChangedFiles = new LinkedHashSet<>();
     private final Object stateLock = new Object();
 
     private volatile ScheduledFuture<?> pendingRender;
     private volatile boolean running;
-    private volatile boolean showHelp = true;
+
     volatile boolean watching;
     volatile boolean serving;
     private volatile int renderCount;
@@ -179,12 +184,19 @@ public class lazyslide implements Runnable {
         }
 
         if (Files.isDirectory(path)) {
-            inputDir = path;
-            List<Path> adocFiles = scanAdocFiles(path);
-            if (adocFiles.isEmpty()) {
-                throw new IOException("No .adoc files found in " + path);
+            // If the directory contains an index.adoc, use it directly (user is in control)
+            Path indexFile = path.resolve("index.adoc");
+            if (Files.isRegularFile(indexFile)) {
+                file = indexFile.toFile();
+                // Stay in single-file mode — inputDir remains null
+            } else {
+                inputDir = path;
+                List<Path> adocFiles = scanAdocFiles(path);
+                if (adocFiles.isEmpty()) {
+                    throw new IOException("No .adoc files found in " + path);
+                }
+                virtualIndexContent = generateVirtualIndex(path, adocFiles);
             }
-            virtualIndexContent = generateVirtualIndex(path, adocFiles);
         } else if (!Files.exists(path)) {
             throw new IOException("File not found: " + path
                     + "\nNo 'slides/' or 'docs/' directory found either."
@@ -271,7 +283,7 @@ public class lazyslide implements Runnable {
             Path candidate = dir.resolve(filename);
             if (Files.exists(candidate)) {
                 var attrs = parseAttributesFile(candidate);
-                enqueueMessage("loaded " + attrs.size() + " attributes from " + filename);
+                enqueueMarkup("loaded [bold cyan]" + attrs.size() + "[/] attributes from [yellow]" + filename + "[/]");
                 return attrs;
             }
         }
@@ -295,7 +307,7 @@ public class lazyslide implements Runnable {
                 }
             }
         } catch (IOException e) {
-            enqueueMessage("failed to read " + file.getFileName() + ": " + e.getMessage());
+            enqueueMarkup("[red]failed to read[/] [yellow]" + file.getFileName() + "[/]: " + e.getMessage());
         }
         return attrs;
     }
@@ -333,13 +345,13 @@ public class lazyslide implements Runnable {
      * {@code watching}, and {@code serving}.
      */
     private void initAsciidoctor() {
-        enqueueMessage("warming up Asciidoctor...");
+        enqueueMarkup("[yellow]⏳[/] warming up Asciidoctor...");
         long start = System.nanoTime();
         asciidoctor = Asciidoctor.Factory.create();
         asciidoctor.registerLogHandler(new LogHandler() {
             @Override
             public void log(LogRecord logRecord) {
-                enqueueMessage("asciidoctor: " + logRecord.getMessage());
+                enqueueMarkup("[gray]asciidoctor:[/] " + logRecord.getMessage());
             }
         });
         asciidoctor.requireLibrary("asciidoctor-revealjs");
@@ -348,12 +360,15 @@ public class lazyslide implements Runnable {
         asciidoctor.javaExtensionRegistry().inlineMacro(new EmojiMacro());
         asciidoctorReady = true;
         long took = System.nanoTime() - start;
-        enqueueMessage(String.format("Asciidoctor ready in %s", formatNanos(took)));
+        enqueueMarkup(String.format("[green]✔[/] Asciidoctor ready in [bold]%s[/]", formatNanos(took)));
         scheduleRender("startup");
     }
 
     int execute() throws Exception {
         running = true;
+
+        // Route uncaught exceptions to the message log instead of stderr (corrupts TUI)
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> enqueueMarkup("[red]error[/] [gray][" + t.getName() + "][/]: " + e.getMessage()));
 
         // Resolve input: if it's a directory, generate virtual index
         resolveInput();
@@ -376,8 +391,8 @@ public class lazyslide implements Runnable {
         // Interactive: start TUI immediately, init Asciidoctor in background
         try {
             if (inputDir != null) {
-                enqueueMessage("directory mode: " + inputDir);
-                enqueueMessage("virtual index: " + virtualIndexContent.lines().filter(l -> l.startsWith("include::")).count() + " includes");
+                enqueueMarkup("directory mode: [yellow]" + inputDir + "[/]");
+                enqueueMarkup("virtual index: [bold cyan]" + virtualIndexContent.lines().filter(l -> l.startsWith("include::")).count() + "[/] includes");
             }
             if (serving) {
                 startServer();
@@ -388,7 +403,24 @@ public class lazyslide implements Runnable {
 
             Thread.ofVirtual().name("lazyslide-init").start(this::initAsciidoctor);
 
-            new DashboardApp().run();
+            while (true) {
+                var app = new DashboardApp();
+                tuiApp = app;
+                app.run();
+                if (pendingEditorCmd == null) break;
+                // TUI exited for editor launch — run editor then restart TUI
+                String[] cmd = pendingEditorCmd;
+                pendingEditorCmd = null;
+                try {
+                    new ProcessBuilder(cmd)
+                            .directory(rootDir().toFile())
+                            .inheritIO()
+                            .start()
+                            .waitFor();
+                } catch (Exception e) {
+                    pendingMarkup.add("[red]editor launch failed:[/] " + e.getMessage());
+                }
+            }
             return 0;
         } finally {
             shutdown();
@@ -496,9 +528,34 @@ public class lazyslide implements Runnable {
     }
 
     private void enqueueMessage(String msg) {
-        statusMessages.add(timestamp() + " " + msg);
-        while (statusMessages.size() > 12) {
-            statusMessages.poll();
+        String line = timestamp() + " " + msg;
+        if (tuiApp != null && tuiApp.isReady()) {
+            tuiApp.log(line);
+        } else if (interactive) {
+            pendingMarkup.add("[white]" + line + "[/]");
+        } else {
+            System.out.println(line);
+        }
+    }
+
+    private void enqueueMarkup(String markup) {
+        String line = "[gray]" + timestamp() + "[/] " + markup;
+        if (tuiApp != null && tuiApp.isReady()) {
+            tuiApp.logMarkup(line);
+        } else if (interactive) {
+            pendingMarkup.add(line);
+        } else {
+            // strip markup for non-interactive
+            System.out.println(timestamp() + " " + markup.replaceAll("\\[/?[^]]*]", ""));
+        }
+    }
+
+    private void flushPendingMarkup() {
+        String line;
+        while ((line = pendingMarkup.poll()) != null) {
+            if (tuiApp != null) {
+                tuiApp.logMarkup(line);
+            }
         }
     }
 
@@ -555,7 +612,7 @@ public class lazyslide implements Runnable {
 
     private synchronized void doRender(String reason) {
         if (!asciidoctorReady) {
-            enqueueMessage("render skipped: Asciidoctor still loading...");
+            enqueueMarkup("[yellow]⏳[/] render skipped: Asciidoctor still loading...");
             return;
         }
         long start = System.nanoTime();
@@ -567,7 +624,7 @@ public class lazyslide implements Runnable {
         try {
             Files.createDirectories(outDir);
         } catch (IOException e) {
-            enqueueMessage("failed to create output dir " + outDir + ": " + e.getMessage());
+            enqueueMarkup("[red]failed to create output dir[/] [yellow]" + outDir + "[/]: " + e.getMessage());
             return;
         }
 
@@ -602,11 +659,11 @@ public class lazyslide implements Runnable {
                         try {
                             mirrorDir(from, to);
                         } catch (IOException e) {
-                            enqueueMessage("asset sync failed for " + name + ": " + e.getMessage());
+                            enqueueMarkup("[red]asset sync failed[/] [yellow]" + name + "[/]: " + e.getMessage());
                         }
                     });
         } catch (IOException e) {
-            enqueueMessage("failed to list source dirs: " + e.getMessage());
+            enqueueMarkup("[red]failed to list source dirs:[/] " + e.getMessage());
         }
 
         // In directory mode, regenerate the virtual index to pick up new/deleted files
@@ -617,16 +674,16 @@ public class lazyslide implements Runnable {
                     String newContent = generateVirtualIndex(inputDir, adocFiles);
                     if (!newContent.equals(virtualIndexContent)) {
                         virtualIndexContent = newContent;
-                        enqueueMessage("virtual index updated: " + adocFiles.size() + " files");
+                        enqueueMarkup("virtual index updated: [bold cyan]" + adocFiles.size() + "[/] files");
                     }
                 }
             } catch (IOException e) {
-                enqueueMessage("failed to rescan directory: " + e.getMessage());
+                enqueueMarkup("[red]failed to rescan directory:[/] " + e.getMessage());
             }
         }
 
         if (interactive) {
-            enqueueMessage("rendering: " + reason + (changed.isEmpty() ? "" : " | changed: " + String.join(", ", changed)));
+            enqueueMarkup("[yellow]↻[/] rendering: [white]" + reason + "[/]" + (changed.isEmpty() ? "" : " [gray]|[/] [cyan]" + String.join(", ", changed) + "[/]"));
         } else {
             System.out.printf("lazyslide: rendering %s -> %s (%s)%n", inputDir != null ? inputDir : file, outDir, reason);
             if (!changed.isEmpty()) {
@@ -653,7 +710,7 @@ public class lazyslide implements Runnable {
             try {
                 Files.writeString(targetFile, html);
             } catch (IOException e) {
-                enqueueMessage("failed to write index.html: " + e.getMessage());
+                enqueueMarkup("[red]failed to write[/] [yellow]index.html[/]: " + e.getMessage());
                 return;
             }
         } else {
@@ -677,10 +734,13 @@ public class lazyslide implements Runnable {
         lastRenderSummary = String.format("Rendered %s in %.2fs", outputName(), took / 1_000_000_000.0);
 
         if (interactive) {
-            enqueueMessage(lastRenderSummary);
+            enqueueMarkup("[green]✔[/] [bold]" + lastRenderSummary + "[/]");
         } else {
             System.out.printf("lazyslide: done in %.2fs (%s)%n", took / 1_000_000_000.0, file);
         }
+
+        // Push reload to connected browsers
+        broadcastReload();
     }
 
     private List<String> drainChangedFiles() {
@@ -708,32 +768,124 @@ public class lazyslide implements Runnable {
         pendingRender = scheduler.schedule(() -> doRender(reason), 180, TimeUnit.MILLISECONDS);
     }
 
+    private static final String LIVE_RELOAD_SCRIPT = """
+            <script>
+            (function() {
+              function connect() {
+                var ws = new WebSocket('ws://' + location.host + '/livereload');
+                ws.onmessage = function(e) {
+                  var msg = JSON.parse(e.data);
+                  if (msg.command === 'reload') location.reload();
+                };
+                ws.onclose = function() { setTimeout(connect, 2000); };
+                ws.onerror = function() { ws.close(); };
+              }
+              connect();
+            })();
+            </script>
+            """;
+
+    private static String injectLiveReload(String html) {
+        int i = html.lastIndexOf("</body>");
+        if (i >= 0) {
+            return html.substring(0, i) + LIVE_RELOAD_SCRIPT + html.substring(i);
+        }
+        return html + LIVE_RELOAD_SCRIPT;
+    }
+
+    private void broadcastReload() {
+        if (wsClients.isEmpty()) return;
+        enqueueMarkup("[magenta]↻[/] live reload: notifying [bold]" + wsClients.size() + "[/] browser" + (wsClients.size() == 1 ? "" : "s"));
+        for (ServerWebSocket ws : wsClients) {
+            try {
+                ws.writeTextMessage("{\"command\":\"reload\"}");
+            } catch (Exception e) {
+                wsClients.remove(ws);
+            }
+        }
+    }
+
     private void startServer() throws IOException {
         if (httpServer != null) {
             return;
         }
-        var address = new InetSocketAddress(port);
         try {
             Path outDir = outputDir();
             Files.createDirectories(outDir);
-            httpServer = SimpleFileServer.createFileServer(
-                    address,
-                    outDir,
-                    SimpleFileServer.OutputLevel.NONE);
-            httpServer.start();
-            enqueueMessage("serving at " + currentUrl());
+            // Suppress noisy Netty DNS warning on macOS
+            java.util.logging.Logger.getLogger("io.netty").setLevel(java.util.logging.Level.SEVERE);
+            vertx = Vertx.vertx();
+
+            httpServer = vertx.createHttpServer();
+            httpServer.webSocketHandler(ws -> {
+                if ("/livereload".equals(ws.path())) {
+                    ws.accept();
+                    wsClients.add(ws);
+                    // Connection count shown in status bar, no per-connect log spam
+                    ws.closeHandler(v -> {
+                        wsClients.remove(ws);
+                    });
+                    ws.exceptionHandler(err -> {
+                        wsClients.remove(ws);
+                    });
+                } else {
+                    ws.reject();
+                }
+            });
+
+            httpServer.requestHandler(req -> {
+                String path = req.path();
+                if ("/".equals(path)) path = "/" + outputName();
+                Path filePath = outDir.resolve(path.substring(1)).normalize();
+                if (!filePath.startsWith(outDir) || !Files.exists(filePath)) {
+                    enqueueMarkup("[red]404[/] [gray]" + req.method() + "[/] " + req.path());
+                    req.response().setStatusCode(404).end("Not found");
+                    return;
+                }
+                try {
+                    String mime = Files.probeContentType(filePath);
+                    if (mime == null) mime = "application/octet-stream";
+
+                    HttpServerResponse resp = req.response();
+                    resp.putHeader("Cache-Control", "no-store");
+
+                    if (mime.startsWith("text/html")) {
+                        String html = injectLiveReload(Files.readString(filePath));
+                        byte[] body = html.getBytes(StandardCharsets.UTF_8);
+                        resp.putHeader("Content-Type", "text/html; charset=utf-8");
+                        resp.end(io.vertx.core.buffer.Buffer.buffer(body));
+                        enqueueMarkup("[green]200[/] [gray]" + req.method() + "[/] " + req.path() + " [cyan](" + body.length + "b)[/]");
+                    } else {
+                        long size = Files.size(filePath);
+                        resp.putHeader("Content-Type", mime);
+                        resp.sendFile(filePath.toString());
+                        enqueueMarkup("[green]200[/] [gray]" + req.method() + "[/] " + req.path() + " [dim]" + mime + "[/] [cyan](" + size + "b)[/]");
+                    }
+                } catch (IOException e) {
+                    enqueueMarkup("[red]500[/] [gray]" + req.method() + "[/] " + req.path() + " [red]" + e.getMessage() + "[/]");
+                    req.response().setStatusCode(500).end(e.getMessage());
+                }
+            });
+
+            httpServer.listen(port).toCompletionStage().toCompletableFuture().get();
+            enqueueMarkup("[green]▶[/] serving at [bold yellow]" + currentUrl() + "[/]");
         } catch (Exception e) {
-            httpServer = null;
-            throw new IOException(String.format("failed to start server on %s:%d — %s", address.getHostString(), port, e.getMessage()), e);
+            stopServer();
+            throw new IOException(String.format("failed to start server on port %d — %s", port, e.getMessage()), e);
         }
     }
 
     private void stopServer() {
+        wsClients.clear();
         if (httpServer != null) {
-            httpServer.stop(0);
+            httpServer.close();
             httpServer = null;
-            enqueueMessage("server stopped");
         }
+        if (vertx != null) {
+            vertx.close();
+            vertx = null;
+        }
+        enqueueMarkup("[gray]server stopped[/]");
     }
 
     private void startWatcher() throws IOException {
@@ -742,7 +894,7 @@ public class lazyslide implements Runnable {
         }
         watchService = FileSystems.getDefault().newWatchService();
         registerRecursive(rootDir());
-        enqueueMessage("watching " + rootDir());
+        enqueueMarkup("watching [yellow]" + rootDir() + "[/]");
         watchThread = Thread.ofVirtual().name("lazyslide-watch", 0).start(() -> {
             try {
                 while (running) {
@@ -753,24 +905,24 @@ public class lazyslide implements Runnable {
                         String name = changed.getFileName().toString();
                         if (isIgnoredGeneratedOutput(watchedDir, name)) {
                             if (verbose) {
-                                enqueueMessage("ignored generated output " + name + " [" + event.kind().name() + "]");
+                                enqueueMarkup("[dim]ignored[/] [gray]" + name + " [" + event.kind().name() + "][/]");
                             }
                             continue;
                         }
                         if (name.endsWith(".adoc") || name.endsWith(".svg") || name.endsWith(".css") || name.endsWith(".html")) {
                             Path absolute = watchedDir.resolve(changed);
                             String full = rootDir().relativize(absolute).toString();
-                            enqueueMessage("changed " + full + " [" + event.kind().name() + "]");
+                            enqueueMarkup("[yellow]•[/] changed [cyan]" + full + "[/] [gray][" + event.kind().name() + "][/]");
                             noteChanged(full);
                         } else if (verbose) {
-                            enqueueMessage("ignored " + name + " [" + event.kind().name() + "]");
+                            enqueueMarkup("[dim]ignored[/] [gray]" + name + " [" + event.kind().name() + "][/]");
                         }
                     }
                     key.reset();
                 }
             } catch (Exception e) {
                 if (running) {
-                    enqueueMessage("watch stopped: " + e.getMessage());
+                    enqueueMarkup("[red]watch stopped:[/] " + e.getMessage());
                 }
             }
         });
@@ -790,25 +942,124 @@ public class lazyslide implements Runnable {
         }
     }
 
+    /** GUI editors to auto-detect (return immediately, don't need terminal). */
+    private static final List<String[]> KNOWN_EDITORS = List.of(
+            new String[]{"code",    "Visual Studio Code"},
+            new String[]{"cursor",  "Cursor"},
+            new String[]{"idea",    "IntelliJ IDEA"},
+            new String[]{"zed",     "Zed"},
+            new String[]{"subl",    "Sublime Text"},
+            new String[]{"atom",    "Atom"},
+            new String[]{"mate",    "TextMate"},
+            new String[]{"nova",    "Nova"}
+    );
+
+    private static boolean isInPath(String cmd) {
+        try {
+            String which = System.getProperty("os.name", "").toLowerCase().contains("win") ? "where" : "which";
+            return new ProcessBuilder(which, cmd)
+                    .redirectErrorStream(true)
+                    .start()
+                    .waitFor() == 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static Set<String> runningProcessNames() {
+        try {
+            return ProcessHandle.allProcesses()
+                    .map(p -> p.info().command().orElse(""))
+                    .map(c -> Path.of(c).getFileName().toString().toLowerCase())
+                    .collect(java.util.stream.Collectors.toSet());
+        } catch (Exception e) {
+            return Set.of();
+        }
+    }
+
+    private void showSource() {
+        if (tuiApp == null) return;
+        tuiApp.logMarkup("[dim]─── source " + "─".repeat(200) + "[/]");
+        String source;
+        if (inputDir != null && virtualIndexContent != null) {
+            tuiApp.logMarkup("Virtual index [gray](directory mode:[/] [yellow]" + inputDir + "[/][gray])[/]");
+            source = virtualIndexContent;
+        } else {
+            tuiApp.logMarkup("File: [yellow]" + file.getAbsolutePath() + "[/]");
+            try {
+                source = Files.readString(file.toPath());
+            } catch (IOException e) {
+                tuiApp.logMarkup("[red]failed to read:[/] " + e.getMessage());
+                return;
+            }
+        }
+        String[] lines = source.split("\n", -1);
+        for (int i = 0; i < lines.length; i++) {
+            tuiApp.logMarkup(String.format("[dim]%4d │[/] %s", i + 1, lines[i]));
+        }
+        tuiApp.logMarkup("[dim]" + "─".repeat(200) + "[/]");
+    }
+
     private void openEditor() {
         String editor = System.getenv("VISUAL");
+        String source = "VISUAL";
+        boolean terminal = false;
+
         if (editor == null) {
             editor = System.getenv("EDITOR");
+            source = "EDITOR";
+            terminal = editor != null; // EDITOR implies terminal editor
         }
+
+        // Auto-detect: only GUI editors, prefer running ones
         if (editor == null) {
-            enqueueMessage("no editor found — set VISUAL or EDITOR env var");
+            Set<String> running = runningProcessNames();
+            for (String[] entry : KNOWN_EDITORS) {
+                if (running.contains(entry[0]) && isInPath(entry[0])) {
+                    editor = entry[0];
+                    source = "found " + entry[1] + " running";
+                    break;
+                }
+            }
+            if (editor == null) {
+                for (String[] entry : KNOWN_EDITORS) {
+                    if (isInPath(entry[0])) {
+                        editor = entry[0];
+                        source = "found " + entry[1] + " in PATH";
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (editor == null) {
+            var found = new ArrayList<String>();
+            for (String[] entry : KNOWN_EDITORS) found.add(entry[0]);
+            enqueueMarkup("[red]no GUI editor found[/] — set [bold]VISUAL[/] or [bold]EDITOR[/], or install one of: [cyan]" + String.join(", ", found) + "[/]");
             return;
         }
-        try {
-            Path dir = rootDir();
-            Path target = dir.resolve(file.getName());
-            new ProcessBuilder(editor, ".", target.toString())
-                    .directory(dir.toFile())
-                    .inheritIO()
-                    .start();
-            enqueueMessage("opened editor: " + editor + " . " + file.getName());
-        } catch (Exception e) {
-            enqueueMessage("editor launch failed: " + e.getMessage());
+
+        Path dir = rootDir();
+        Path target = dir.resolve(file.getName());
+
+        if (terminal) {
+            // Terminal editor (EDITOR=vim etc.) — quit TUI, run editor, restart TUI
+            pendingMarkup.add("opened editor: [bold cyan]" + editor + "[/] [gray](" + source + ")[/]");
+            pendingEditorCmd = new String[]{editor, target.toString()};
+            if (tuiApp != null) tuiApp.stop();
+        } else {
+            // GUI editor — launch and continue
+            try {
+                new ProcessBuilder(editor, ".", target.toString())
+                        .directory(dir.toFile())
+                        .start();
+                enqueueMarkup("opened editor: [bold cyan]" + editor + "[/] [gray](" + source + ")[/]");
+                if (!source.equals("VISUAL")) {
+                    enqueueMarkup("[dim]tip: set [bold]VISUAL[/][dim] env var to pick your preferred editor[/]");
+                }
+            } catch (Exception e) {
+                enqueueMarkup("[red]editor launch failed:[/] " + e.getMessage());
+            }
         }
     }
 
@@ -817,11 +1068,11 @@ public class lazyslide implements Runnable {
             URI uri = URI.create(currentUrl());
             if (Desktop.isDesktopSupported()) {
                 Desktop.getDesktop().browse(uri);
-                enqueueMessage("opened " + uri);
+                enqueueMarkup("opened [yellow]" + uri + "[/]");
                 return;
             }
         } catch (Exception e) {
-            enqueueMessage("browser open failed: " + e.getMessage());
+            enqueueMarkup("[red]browser open failed:[/] " + e.getMessage());
         }
 
         try {
@@ -832,15 +1083,15 @@ public class lazyslide implements Runnable {
             } else {
                 new ProcessBuilder("xdg-open", currentUrl()).start();
             }
-            enqueueMessage("opened " + currentUrl());
+            enqueueMarkup("opened [yellow]" + currentUrl() + "[/]");
         } catch (Exception e) {
-            enqueueMessage("could not open browser: " + e.getMessage());
+            enqueueMarkup("[red]could not open browser:[/] " + e.getMessage());
         }
     }
 
     private void toggleWatch() {
         if (serving) {
-            enqueueMessage("watch is locked while serve is on");
+            enqueueMarkup("[yellow]watch is locked while serve is on[/]");
             return;
         }
         if (watchService == null) {
@@ -849,7 +1100,7 @@ public class lazyslide implements Runnable {
                 startWatcher();
                 requestRender("watch enabled");
             } catch (IOException e) {
-                enqueueMessage("watch error: " + e.getMessage());
+                enqueueMarkup("[red]watch error:[/] " + e.getMessage());
             }
         } else {
             watching = false;
@@ -865,7 +1116,7 @@ public class lazyslide implements Runnable {
                     watching = true;
                     startWatcher();
                 } catch (IOException e) {
-                    enqueueMessage("watch error: " + e.getMessage());
+                    enqueueMarkup("[red]watch error:[/] " + e.getMessage());
                 }
             }
             try {
@@ -873,7 +1124,7 @@ public class lazyslide implements Runnable {
                 openPresentation();
             } catch (IOException e) {
                 serving = false;
-                enqueueMessage(e.getMessage());
+                enqueueMarkup("[red]" + e.getMessage() + "[/]");
             }
         } else {
             serving = false;
@@ -901,130 +1152,101 @@ public class lazyslide implements Runnable {
         scheduler.shutdownNow();
     }
 
-    private final class DashboardApp extends ToolkitApp {
+    private final class DashboardApp extends InlineApp {
+        public boolean isReady() {
+            return runner() != null;
+        }
+
+        public void stop() {
+            quit();
+        }
+
+        public void log(String message) {
+            runner().runOnRenderThread(() -> super.println(message));
+        }
+
+        public void logMarkup(String markup) {
+            runner().runOnRenderThread(() -> super.println(markupText(markup)));
+        }
+
         @Override
-        protected TuiConfig configure() {
-            return TuiConfig.builder()
+        protected void onStart() {
+            flushPendingMarkup();
+        }
+
+        protected int height() {
+            return 2;
+        }
+
+        @Override
+        protected InlineTuiConfig configure(int height) {
+            return InlineTuiConfig.builder(height)
                     .tickRate(Duration.ofMillis(250))
                     .build();
         }
 
         @Override
         protected Element render() {
-            var root = dock()
-                    .top(statusPanel(), Constraint.length(11))
-                    .left(changesPanel(), Constraint.percentage(34))
-                    .bottom(shortcutsPanel(), Constraint.length(showHelp ? 3 : 0))
-                    .center(eventsPanel())
-                    .focusable()
-                    .onKeyEvent(event -> {
-                        if (event.isQuit() || event.isCharIgnoreCase('q')) {
-                            quit();
-                            return EventResult.HANDLED;
-                        }
-                        if (event.isCharIgnoreCase('r')) {
-                            requestRender("manual refresh");
-                            return EventResult.HANDLED;
-                        }
-                        if (event.isCharIgnoreCase('w')) {
-                            toggleWatch();
-                            return EventResult.HANDLED;
-                        }
-                        if (event.isCharIgnoreCase('s')) {
-                            toggleServe();
-                            return EventResult.HANDLED;
-                        }
-                        if (event.isCharIgnoreCase('o')) {
-                            openPresentation();
-                            return EventResult.HANDLED;
-                        }
-                        if (event.isCharIgnoreCase('h')) {
-                            showHelp = !showHelp;
-                            return EventResult.HANDLED;
-                        }
-                        if (event.isCharIgnoreCase('e')) {
-                            openEditor();
-                            return EventResult.HANDLED;
-                        }
-                        if (event.isCharIgnoreCase('c')) {
-                            statusMessages.clear();
-                            return EventResult.HANDLED;
-                        }
-                        return EventResult.UNHANDLED;
-                    });
+            String renderInfo = renderCount == 0
+                    ? "waiting..."
+                    : String.format("#%d %s (avg %s)", renderCount, formatNanos(lastRenderNanos),
+                            formatNanos(totalRenderNanos / renderCount));
 
-            return root;
+            return column(
+                    row(
+                            markupText("[cyan]▶[/] [bold white]" + currentUrl() + "[/]"),
+                            text("  "),
+                            text(renderInfo).gray(),
+                            text("  "),
+                            markupText(wsClients.isEmpty() ? "" : "[magenta]" + wsClients.size() + " client" + (wsClients.size() == 1 ? "" : "s") + "[/]")
+                    ),
+                    row(
+                            markupText("[bold white]r[/][gray]ender[/]"),
+                            text(" "),
+                            markupText("[bold white]w[/][gray]atch[/]"),
+                            text(" "),
+                            markupText("[bold white]s[/][gray]erve[/]"),
+                            text(" "),
+                            markupText("[bold white]o[/][gray]pen[/]"),
+                            text(" "),
+                            markupText("[bold white]e[/][gray]dit[/]"),
+                            text(" "),
+                            markupText("[bold white]i[/][gray]nfo[/]"),
+                            text(" "),
+                            markupText("[bold white]q[/][gray]uit[/]")
+                    )
+            ).onKeyEvent(event -> {
+                if (event.isQuit() || event.isCharIgnoreCase('q')) {
+                    quit();
+                    return EventResult.HANDLED;
+                }
+                if (event.isCharIgnoreCase('r')) {
+                    requestRender("manual refresh");
+                    return EventResult.HANDLED;
+                }
+                if (event.isCharIgnoreCase('w')) {
+                    toggleWatch();
+                    return EventResult.HANDLED;
+                }
+                if (event.isCharIgnoreCase('s')) {
+                    toggleServe();
+                    return EventResult.HANDLED;
+                }
+                if (event.isCharIgnoreCase('o')) {
+                    openPresentation();
+                    return EventResult.HANDLED;
+                }
+                if (event.isCharIgnoreCase('e')) {
+                    openEditor();
+                    return EventResult.HANDLED;
+                }
+                if (event.isCharIgnoreCase('i')) {
+                    showSource();
+                    return EventResult.HANDLED;
+                }
+                return EventResult.UNHANDLED;
+            }).focusable();
         }
-    }
-
-    private Element statusPanel() {
-        String renderInfo = renderCount == 0
-                ? "Waiting for first render..."
-                : String.format("#%d  %s  (avg %s)  %s", renderCount, formatNanos(lastRenderNanos),
-                        formatNanos(totalRenderNanos / renderCount), lastRenderReason);
-        return panel("Status",
-                column(
-                        row(text("File").gray(), spacer(), text(file.getName()).cyan().bold()),
-                        row(text("Output").gray(), spacer(), text(outputName()).green().bold()),
-                        row(text("Out dir").gray(), spacer(), text(rootDir().relativize(outputDir()).toString()).green()),
-                        row(text("URL").gray(), spacer(), text(currentUrl()).yellow()),
-                        row(text("Mode").gray(), spacer(), text(modeText()).magenta()),
-                        row(text("Render").gray(), spacer(), text(renderInfo).white()),
-                        row(text("Last").gray(), spacer(), text(lastRenderSummary).green())
-                )
-        ).rounded().borderColor(Color.CYAN).padding(1);
-    }
-
-    private Element shortcutsPanel() {
-        Element body = showHelp
-                ? row(
-                        markupText("[bold white]r[/] [cyan]render[/]"),
-                        markupText("[bold white]w[/] [cyan]watch[/]"),
-                        markupText("[bold white]s[/] [cyan]serve[/]"),
-                        markupText("[bold white]o[/] [cyan]open[/]"),
-                        markupText("[bold white]e[/] [cyan]editor[/]"),
-                        markupText("[bold white]c[/] [cyan]clear log[/]"),
-                        markupText("[bold white]h[/] [cyan]help[/]"),
-                        markupText("[bold white]q[/] [cyan]quit[/]")
-                ).spacing(1)
-                : text("Press h to show shortcuts").gray();
-
-        return panel("Shortcuts", body)
-                .rounded().borderColor(Color.MAGENTA).padding(0).fit();
-    }
-
-    private Element changesPanel() {
-        List<String> changes = lastChangedFiles;
-        List<Element> lines = new ArrayList<>();
-        if (changes.isEmpty()) {
-            lines.add(text("No slide changes yet.").gray());
-        } else {
-            for (String change : changes) {
-                lines.add(text("• " + change).yellow());
-            }
-        }
-        return panel("Last changed files", column(lines.toArray(Element[]::new)))
-                .rounded().borderColor(Color.GREEN).padding(1);
-    }
-
-    private Element eventsPanel() {
-        var snapshot = new ArrayList<>(statusMessages);
-        List<Element> lines = new ArrayList<>();
-        if (snapshot.isEmpty()) {
-            lines.add(text("Waiting for slide drama...").gray());
-        } else {
-            int start = Math.max(0, snapshot.size() - 8);
-            for (int i = start; i < snapshot.size(); i++) {
-                lines.add(text(snapshot.get(i)).white());
-            }
-        }
-        return panel("Recent events", column(lines.toArray(Element[]::new)))
-                .rounded().borderColor(Color.YELLOW).padding(1).fill();
-    }
-
-
-    private String modeText() {
-        return (watching ? "[ON]" : "[OFF]") + " watch   " + (serving ? "[ON]" : "[OFF]") + " serve   " + (interactive ? "[ON]" : "[OFF]") + " tui";
     }
 
     private static String formatNanos(long nanos) {
@@ -1068,13 +1290,12 @@ public class lazyslide implements Runnable {
             List<TemplateFile> files = List.of(
                     new TemplateFile("README.adoc", readme(title, author)),
                     new TemplateFile(".gitignore", gitignore()),
-                    new TemplateFile("index.adoc", indexAdoc(title, author)),
-                    new TemplateFile("docinfo-footer.html", docinfoFooter()),
-                    new TemplateFile("css/presentation.css", presentationCss()),
-                    new TemplateFile("slides/title.adoc", titleSlide()),
-                    new TemplateFile("slides/story.adoc", storySlide()),
-                    new TemplateFile("slides/closing.adoc", closingSlide()),
-                    new TemplateFile("images/.gitkeep", "")
+                    new TemplateFile("slides/index.adoc", indexAdoc(title, author)),
+                    new TemplateFile("slides/css/presentation.css", presentationCss()),
+                    new TemplateFile("slides/01-title.adoc", titleSlide()),
+                    new TemplateFile("slides/02-story.adoc", storySlide()),
+                    new TemplateFile("slides/03-closing.adoc", closingSlide()),
+                    new TemplateFile("slides/img/.gitkeep", "")
             );
 
             for (TemplateFile template : files) {
@@ -1096,7 +1317,7 @@ public class lazyslide implements Runnable {
             System.out.println();
             System.out.println("Next steps:");
             System.out.println("  cd " + root);
-            System.out.println("  lazyslide serve");
+            System.out.println("  lazyslide serve slides/");
             System.out.println();
             System.out.println("If `lazyslide` is not installed globally yet, run the same command through the JBang source path instead.");
             System.out.println("For example from this repo: ./jbang lazyslide/lazyslide.java serve");
@@ -1108,43 +1329,23 @@ public class lazyslide implements Runnable {
 
         private static String readme(String title, String author) {
             return "= " + title + "\n"
-                    + ":author: " + author + "\n"
-                    + ":icons: font\n"
-                    + ":source-highlighter: highlightjs\n"
-                    + ":highlightjs-theme: https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css\n"
-                    + ":highlightjs-languages: bash\n"
-                    + ":revealjs_theme: black\n"
-                    + ":revealjs_transition: slide\n"
-                    + ":revealjs_hash: true\n"
-                    + ":revealjs_history: true\n\n"
-                    + "[%notitle]\n"
-                    + "== {doctitle}\n\n"
-                    + "[.lead]\n"
-                    + "A tiny slide deck and quickstart for your new lazyslide project.\n\n"
+                    + ":author: " + author + "\n\n"
                     + "== Render once\n\n"
                     + "[source,bash]\n"
                     + "----\n"
-                    + "lazyslide\n"
+                    + "lazyslide render slides/\n"
                     + "----\n\n"
-                    + "This renders `index.adoc` to `public/index.html`.\n\n"
                     + "== Live preview\n\n"
                     + "[source,bash]\n"
                     + "----\n"
-                    + "lazyslide serve\n"
+                    + "lazyslide serve slides/\n"
                     + "----\n\n"
-                    + "That enables rendering, watching, serving, and the terminal dashboard.\n\n"
                     + "== Project layout\n\n"
-                    + "- `index.adoc` — deck entrypoint\n"
-                    + "- `slides/` — slide fragments\n"
-                    + "- `css/presentation.css` — reveal.js custom styling\n"
-                    + "- `images/` — local images and diagrams\n"
-                    + "- `docinfo-footer.html` — browser auto-reload helper\n\n"
-                    + "== No global `lazyslide` yet?\n\n"
-                    + "No problem — just run the same command through the JBang source path for `lazyslide.java`.\n\n"
-                    + "== Next steps\n\n"
-                    + "- Replace the starter slides\n"
-                    + "- Add your own styling and assets\n"
-                    + "- Publish the generated `public/` output\n";
+                    + "- `slides/` — slide `.adoc` files (scanned in lexicographic order)\n"
+                    + "- `slides/_attributes.adoc` — shared reveal.js and theme settings\n"
+                    + "- `slides/css/` — custom stylesheets\n"
+                    + "- `slides/img/` — images and diagrams\n"
+                    + "- `slides/public/` — rendered output (git-ignored)\n";
         }
 
         private static String gitignore() {
@@ -1156,7 +1357,7 @@ public class lazyslide implements Runnable {
             return "= " + title + "\n"
                     + ":author: " + author + "\n"
                     + ":icons: font\n"
-                    + ":imagesdir: images\n"
+                    + ":imagesdir: img\n"
                     + ":source-highlighter: highlightjs\n"
                     + ":highlightjs-theme: https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css\n"
                     + ":highlightjs-languages: java, css, bash\n"
@@ -1169,32 +1370,10 @@ public class lazyslide implements Runnable {
                     + ":revealjs_transitionSpeed: fast\n"
                     + ":revealjs_hash: true\n"
                     + ":revealjs_history: true\n"
-                    + ":docinfo: shared-footer\n"
                     + "// :revealjs_showNotes: true\n\n"
-                    + "include::slides/title.adoc[]\n\n"
-                    + "include::slides/story.adoc[]\n\n"
-                    + "include::slides/closing.adoc[]\n";
-        }
-
-        private static String docinfoFooter() {
-            return "<script>\n"
-                    + "(function() {\n"
-                    + "  var lastModified = null;\n"
-                    + "  var interval = 1000;\n"
-                    + "  function check() {\n"
-                    + "    fetch(window.location.href, { method: 'HEAD', cache: 'no-store' })\n"
-                    + "      .then(function(r) {\n"
-                    + "        var lm = r.headers.get('last-modified');\n"
-                    + "        if (lastModified && lm !== lastModified) {\n"
-                    + "          window.location.reload();\n"
-                    + "        }\n"
-                    + "        lastModified = lm;\n"
-                    + "      })\n"
-                    + "      .catch(function() {});\n"
-                    + "  }\n"
-                    + "  setInterval(check, interval);\n"
-                    + "})();\n"
-                    + "</script>\n";
+                    + "include::01-title.adoc[]\n\n"
+                    + "include::02-story.adoc[]\n\n"
+                    + "include::03-closing.adoc[]\n";
         }
 
         private static String presentationCss() {
