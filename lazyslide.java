@@ -13,8 +13,8 @@
 //DEPS org.asciidoctor:asciidoctorj-revealjs:5.2.0
 //DEPS org.asciidoctor:asciidoctorj-chart:1.0.0
 //DEPS info.picocli:picocli:4.6.3
-//DEPS dev.tamboui:tamboui-toolkit:LATEST
-//DEPS dev.tamboui:tamboui-jline3-backend:LATEST
+//DEPS dev.tamboui:tamboui-toolkit:0.2.0
+//DEPS dev.tamboui:tamboui-jline3-backend:0.2.0
 //DEPS io.vertx:vertx-web:4.5.13
 //FILES favicon.png
 
