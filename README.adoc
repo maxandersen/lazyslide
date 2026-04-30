@@ -15,7 +15,7 @@ image::logo.png[lazyslide logo,300]
 == lazyslide
 
 [.lead]
-A small JBang tool for writing presentations in AsciiDoc and rendering them to reveal.js.
+A small JBang with TamboUI tool for writing presentations in AsciiDoc and rendering them to reveal.js.
 
 == What it does
 
@@ -25,32 +25,62 @@ A small JBang tool for writing presentations in AsciiDoc and rendering them to r
 - Show a Tamboui Toolkit dashboard while working
 - Bootstrap new talks with `lazyslide init`
 
-== Render this repo's deck
+== Install
+
+Use https://www.jbang.dev[JBang] to install the `lazyslide` app:
 
 [source,bash]
 ----
-./jbang lazyslide/lazyslide.java render
+jbang app install lazyslide@axandersen/lazyslide
+----
+
+== Bootstrap a new presentation
+
+[source,bash]
+----
+lazyslide init my-talk --title "Magic of Terminals" --author "Your Name"
+----
+
+Generated starter decks include:
+
+- `README.adoc`
+- `slides/index.adoc`
+- `slides/css/presentation.css`
+- `slides/img/`
+- `.gitignore`
+
+But you can also just create a single `index.adoc` file and start writing slides.
+
+== Render this repo's deck
+
+Will look for index.adoc in the current directory, or the directory passed as an argument.
+
+If no index.adoc is found it will build up a virtual index.adoc that includes all the .adoc files in the current directory.
+
+[source,bash]
+----
+lazyslide render
 ----
 
 Render a specific entrypoint:
 
 [source,bash]
 ----
-./jbang lazyslide/lazyslide.java render index.adoc
+lazyslide.java render index.adoc
 ----
 
 Render a directory of `.adoc` files:
 
 [source,bash]
 ----
-./jbang lazyslide/lazyslide.java render docs/
+lazyslide render docs/
 ----
 
 == Live preview
 
 [source,bash]
 ----
-./jbang lazyslide/lazyslide.java serve
+lazyslide serve
 ----
 
 That will:
@@ -59,24 +89,7 @@ That will:
 - watch source files
 - serve the output over HTTP
 - open the browser on demand
-- show the TamboUI dashboard
-
-== Bootstrap a new presentation
-
-[source,bash]
-----
-./jbang lazyslide/lazyslide.java init ../my-talk --title "My Talk" --author "Your Name"
-----
-
-Generated starter decks include:
-
-- `README.adoc`
-- `index.adoc`
-- `slides/`
-- `css/presentation.css`
-- `images/`
-- `docinfo-footer.html`
-- `.gitignore`
+- show a inline dashboard in the terminal
 
 == Directory scanning
 
@@ -167,40 +180,18 @@ From lowest to highest:
 
 This works for both directory mode and single-file mode — lazyslide looks for `_attributes.adoc` next to the source file or in the scanned directory.
 
-== Project structure
-
-- `lazyslide.java` — the tool itself
-- `jbang-catalog.json` — alias metadata for `lazyslide`
-- `README.adoc` — this document, readable as text or renderable as slides
-
 == Render this README as slides
 
 [source,bash]
 ----
-./jbang lazyslide/lazyslide.java lazyslide/README.adoc
+lazyslide serve lazyslide/README.adoc
 ----
 
-Or from inside `lazyslide/`:
+You can also render remote files:
 
 [source,bash]
 ----
-../jbang lazyslide.java README.adoc
+lazyslide serve https://raw.githubusercontent.com/axandersen/lazyslide/main/README.adoc
 ----
 
-== Short-name setup
-
-Because the script file is named `lazyslide.java`, the command name is simply `lazyslide`.
-You can also expose it through a JBang alias or catalog entry using `jbang-catalog.json`.
-
-== Why AsciiDoc for a README?
-
-- The file is still readable in plain text
-- It doubles as a small slide deck
-- The same authoring style is used for docs and talks
-- It demonstrates the tool using the tool
-
-== Next steps
-
-- tune the TUI layout further
-- add publishing helpers
-- add PDF export workflows
+Just be aware it will not be able to access relative paths to the file you are rendering.
