@@ -901,6 +901,15 @@ public class lazyslide implements Runnable {
             enqueueMarkup("[green]▶[/] serving at [bold yellow]" + currentUrl() + "[/]");
         } catch (Exception e) {
             stopServer();
+            Throwable cause = e;
+            while (cause != null) {
+                if (cause instanceof java.net.BindException) {
+                    throw new IOException(String.format(
+                        "Port %d is already in use. Stop it or use `-p <port>` to specify a different port.\n",
+                        port, port));
+                }
+                cause = cause.getCause();
+            }
             throw new IOException(String.format("failed to start server on port %d — %s", port, e.getMessage()), e);
         }
     }
