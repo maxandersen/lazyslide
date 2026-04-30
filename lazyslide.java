@@ -16,6 +16,7 @@
 //DEPS dev.tamboui:tamboui-toolkit:LATEST
 //DEPS dev.tamboui:tamboui-jline3-backend:LATEST
 //DEPS io.vertx:vertx-web:4.5.13
+//FILES favicon.png
 
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
@@ -373,6 +374,13 @@ public class lazyslide implements Runnable {
         // Resolve input: if it's a directory, generate virtual index
         resolveInput();
 
+        // Serve mode: use a temp directory for output (don't pollute source tree)
+        if (serving) {
+            serveTempDir = Files.createTempDirectory("lazyslide_");
+            serveTempDir.toFile().deleteOnExit();
+            enqueueMarkup("output: [yellow]" + serveTempDir + "[/]");
+        }
+
         if (!interactive) {
             // Non-interactive: init synchronously, render, exit
             System.out.println("lazyslide: warming up Asciidoctor...");
@@ -511,11 +519,14 @@ public class lazyslide implements Runnable {
         return file.getName().replaceFirst("\\.adoc$", ".html");
     }
 
+    private Path serveTempDir;
+
     private Path outputDir() {
-        Path candidate = Path.of(outputDirName);
-        if (!candidate.isAbsolute()) {
-            candidate = rootDir().resolve(candidate);
+        if (serving && serveTempDir != null) {
+            return serveTempDir;
         }
+        Path candidate = Path.of(outputDirName);
+        // Resolve relative to CWD, not to the input directory
         return candidate.toAbsolutePath().normalize();
     }
 
@@ -785,6 +796,8 @@ public class lazyslide implements Runnable {
             </script>
             """;
 
+
+
     private static String injectLiveReload(String html) {
         int i = html.lastIndexOf("</body>");
         if (i >= 0) {
@@ -836,6 +849,23 @@ public class lazyslide implements Runnable {
             httpServer.requestHandler(req -> {
                 String path = req.path();
                 if ("/".equals(path)) path = "/" + outputName();
+
+                // Serve favicon from classpath
+                if ("/favicon.ico".equals(path) || "/favicon.png".equals(path)) {
+                    try (var in = lazyslide.class.getResourceAsStream("/favicon.png")) {
+                        if (in != null) {
+                            byte[] bytes = in.readAllBytes();
+                            req.response()
+                                    .putHeader("Content-Type", "image/png")
+                                    .putHeader("Cache-Control", "max-age=86400")
+                                    .end(io.vertx.core.buffer.Buffer.buffer(bytes));
+                            return;
+                        }
+                    } catch (IOException ignored) {}
+                    req.response().setStatusCode(404).end("Not found");
+                    return;
+                }
+
                 Path filePath = outDir.resolve(path.substring(1)).normalize();
                 if (!filePath.startsWith(outDir) || !Files.exists(filePath)) {
                     enqueueMarkup("[red]404[/] [gray]" + req.method() + "[/] " + req.path());
@@ -1150,6 +1180,13 @@ public class lazyslide implements Runnable {
         stopWatcher();
         stopServer();
         scheduler.shutdownNow();
+        // Clean up temp directory
+        if (serveTempDir != null) {
+            try (var walk = Files.walk(serveTempDir)) {
+                walk.sorted(java.util.Comparator.reverseOrder())
+                        .forEach(p -> { try { Files.deleteIfExists(p); } catch (IOException ignored) {} });
+            } catch (IOException ignored) {}
+        }
     }
 
     private final class DashboardApp extends InlineApp {
