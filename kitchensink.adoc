@@ -525,9 +525,9 @@ icon:heart[role=red,size=2x] icon:code[size=2x] icon:rocket[size=2x] icon:github
 
 lazyslide provides an `emoji:name[]` inline macro:
 
-emoji:rocket[] emoji:fire[] emoji:tada[] emoji:thumbs-up[] emoji:heart[] emoji:star[] emoji:check-mark[] emoji:warning[]
+emoji:rocket[] emoji:fire[] emoji:tada[] emoji:thumbs-up[] emoji:heart[] emoji:star[] emoji:warning[]
 
-emoji:coffee[] emoji:pizza[] emoji:beer[] emoji:sun[] emoji:moon[] emoji:rainbow[] emoji:unicorn[] emoji:sparkles[]
+emoji:coffee[] emoji:pizza[] emoji:beer[] emoji:sun[] emoji:moon[] emoji:rainbow[] emoji:sparkles[]
 
 .Usage
 [source,asciidoc]
@@ -590,10 +590,24 @@ And move to the right position!
 
 
 // ============================================================
-// DIAGRAMS — Built-in (no external tools needed)
+// DIAGRAMS
 // ============================================================
 
-== Diagrams: PlantUML Sequence
+[%notitle,background-color="#1a1a2e"]
+== Diagrams Ahead
+
+[.big]
+emoji:warning[] *Here be diagrams* emoji:warning[]
+
+24 diagram types follow — PlantUML, Ditaa, QR codes, Graphviz, Mermaid, and more.
+
+Some need external tools; missing ones fail gracefully.
+
+Press *→* to skip the whole section, *↓* to dive in.
+
+// ============================================================
+
+=== PlantUML — Sequence
 
 PlantUML is bundled — no install required.
 
