@@ -20,12 +20,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 25
+      - uses: jdx/mise-action@v2
 
-      - uses: jbangdev/setup-jbang@main
+      - name: Install system packages
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq graphviz mscgen gnuplot
+
+      - name: Install diagram tools
+        run: mise run install-diagram-tools
 
       - name: Render slides
         run: jbang lazyslide.java -o public render README.adoc

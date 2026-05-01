@@ -1,3 +1,23 @@
 [tools]
-go = "latest"
+java = "temurin-25"
 jbang = "latest"
+go = "latest"
+node = "lts"
+python = "latest"
+
+[tasks.install-diagram-tools]
+description = "Install external diagram tools"
+run = """
+# npm-based tools
+npm install -g @mermaid-js/mermaid-cli @softwaretechnik/dbml-renderer \
+  nomnoml bytefield-svg wavedrom-cli state-machine-cat vega-lite vega-cli \
+  @nicolo-ribaudo/pintora-cli
+
+# pip-based tools
+pip install --user blockdiag symbolator
+
+# go-based tools
+go install github.com/asciitosvg/asciitosvg/cmd/a2s@latest
+go install github.com/kaishuu0123/erd-go@latest
+go install oss.terrastruct.com/d2@latest
+"""
