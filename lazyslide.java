@@ -957,8 +957,8 @@ public class lazyslide implements Runnable {
             while (cause != null) {
                 if (cause instanceof java.net.BindException) {
                     throw new IOException(String.format(
-                        "Port %d is already in use. Stop it or use `-p <port>` to specify a different port.\n",
-                        port, port));
+                        "Port %d is already in use. Stop it or use `--port <port>` to specify a different port.",
+                        port));
                 }
                 cause = cause.getCause();
             }
