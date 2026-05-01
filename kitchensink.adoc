@@ -563,6 +563,7 @@ And move to the right position!
 |kbd:[S] |Speaker notes
 |kbd:[F] |Fullscreen
 |kbd:[B] / kbd:[.] |Blackout
+|kbd:[Ctrl+Shift+F] |Search slides
 |kbd:[?] |Show keyboard help
 |===
 
@@ -908,7 +909,7 @@ Ditaa is bundled — no install required.
 
 QR codes are bundled — no install required.
 
-[qrcode,target=qr-demo,format=svg]
+[qrcode,target=qr-demo,format=svg,width=25%]
 ----
 https://github.com/lazyslide
 ----
@@ -948,7 +949,7 @@ graph LR
 
 === D2.footnote:d2[Requires `d2`: `brew install d2` / https://d2lang.com]
 
-[d2,target=d2-diagram,format=svg]
+[d2,target=d2-diagram,format=svg,width=25%]
 ----
 Editor -> lazyslide: .adoc files
 lazyslide -> Browser: HTML + WebSocket
@@ -1053,6 +1054,7 @@ Person *--* Pet
 
 // ============================================================
 
+/*
 === Pikchr.footnote:pikchr[Requires `pikchr`: https://pikchr.org]
 
 [pikchr,target=pikchr-diagram,format=svg]
@@ -1062,6 +1064,7 @@ box rad 10px "lazyslide" fit
 arrow right 200% "HTML" "Output"
 box rad 10px "Browser" fit
 ----
+*/
 
 // ============================================================
 

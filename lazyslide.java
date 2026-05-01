@@ -302,7 +302,8 @@ public class lazyslide implements Runnable {
             Map.entry("revealjs_hash", "true"),
             Map.entry("revealjs_history", "true"),
             Map.entry("revealjs_width", "1920"),
-            Map.entry("revealjs_height", "1080")
+            Map.entry("revealjs_height", "1080"),
+            Map.entry("revealjs_plugin_search", "enabled")
     );
 
     /** Attribute files to look for, in order. First found wins. */
