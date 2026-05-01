@@ -417,6 +417,157 @@ Maxwell's equations:
 \nabla \times \vec{E} = -\frac{\partial \vec{B}}{\partial t}
 ++++
 
+// SECTION 11: Transitions
+// ============================================================
+
+[transition=zoom]
+== Zoom Transition
+
+This slide zooms in.
+
+// ============================================================
+
+[transition=fade]
+=== Fade Transition
+
+This slide fades in.
+
+// ============================================================
+
+[transition=convex]
+=== Convex Transition
+
+This slide uses a convex transition.
+
+// ============================================================
+
+[transition=concave]
+=== Concave Transition
+
+This slide uses a concave transition.
+
+// ============================================================
+
+[transition=none]
+=== No Transition
+
+This slide has no transition.
+
+// ============================================================
+// SECTION 12: Advanced Features
+// ============================================================
+
+[transition=slide]
+== Literal & Sidebar Blocks
+
+.A literal block
+....
+This is rendered as-is.
+  Whitespace is preserved.
+    No formatting applied.
+....
+
+.A sidebar (needs custom CSS in reveal.js)
+****
+Sidebars render with a background in standard AsciiDoc output, but reveal.js themes don't style `.sidebarblock`
+(See `kitchensink.css` for how to style it).
+****
+
+// ============================================================
+
+=== Passthrough (Raw HTML)
+
+++++
+<div style="display: flex; gap: 2em; justify-content: center; align-items: center;">
+  <div style="background: #e74c3c; padding: 1em 2em; border-radius: 8px; color: white; font-weight: bold;">Red</div>
+  <div style="background: #2ecc71; padding: 1em 2em; border-radius: 8px; color: white; font-weight: bold;">Green</div>
+  <div style="background: #3498db; padding: 1em 2em; border-radius: 8px; color: white; font-weight: bold;">Blue</div>
+</div>
+++++
+
+Raw HTML passthrough lets you do anything reveal.js supports.
+
+// ============================================================
+
+=== Nested Slides (Vertical)
+
+Navigate *down* with ↓
+
+=== Vertical Slide 1
+
+This is a vertical (nested) slide.
+
+=== Vertical Slide 2
+
+And another one.
+
+// ============================================================
+// SECTION 13: Icons (Font Awesome)
+// ============================================================
+
+== Icons (Font Awesome)
+
+icon:heart[role=red,size=2x] icon:code[size=2x] icon:rocket[size=2x] icon:github[size=2x] icon:java[size=2x]
+
+[cols="1,3",frame=none,grid=none]
+|===
+|icon:check-circle[role=green] |Feature complete
+|icon:exclamation-triangle[role=yellow] |Needs review
+|icon:times-circle[role=red] |Blocked
+|icon:spinner[role=blue] |In progress
+|===
+
+// ============================================================
+// SECTION 14: Video
+// ============================================================
+
+== Embedded Video
+
+video::dQw4w9WgXcQ[youtube,width=800,height=450]
+
+// ============================================================
+// SECTION 15: Auto-animate
+// ============================================================
+
+[%auto-animate]
+== Auto-animate
+
+Matched element will be animated automatically!
+
+[%auto-animate]
+== !
+
+[.highlight]
+Matched element will be animated automatically!
+
+And move to the right position!
+
+[%hardbreaks]
+⬆️
+⬆️
+⬆️
+
+// ============================================================
+// SECTION 16: Keyboard & Shortcut Reference
+// ============================================================
+
+== reveal.js Keyboard Shortcuts
+
+[cols="1,3",options="header"]
+|===
+|Key |Action
+|kbd:[→] / kbd:[Space] |Next slide
+|kbd:[←] |Previous slide
+|kbd:[↑] / kbd:[↓] |Navigate vertical slides
+|kbd:[Esc] / kbd:[O] |Overview mode
+|kbd:[S] |Speaker notes
+|kbd:[F] |Fullscreen
+|kbd:[B] / kbd:[.] |Blackout
+|kbd:[?] |Show keyboard help
+|===
+
+
+
 // ============================================================
 // SECTION 10: Diagrams — Built-in (no external tools needed)
 // ============================================================
@@ -802,156 +953,6 @@ blockdiag {
 ----
 
 // ============================================================
-
-// SECTION 11: Transitions
-// ============================================================
-
-[transition=zoom]
-== Zoom Transition
-
-This slide zooms in.
-
-// ============================================================
-
-[transition=fade]
-=== Fade Transition
-
-This slide fades in.
-
-// ============================================================
-
-[transition=convex]
-=== Convex Transition
-
-This slide uses a convex transition.
-
-// ============================================================
-
-[transition=concave]
-=== Concave Transition
-
-This slide uses a concave transition.
-
-// ============================================================
-
-[transition=none]
-=== No Transition
-
-This slide has no transition.
-
-// ============================================================
-// SECTION 12: Advanced Features
-// ============================================================
-
-[transition=slide]
-== Literal & Sidebar Blocks
-
-.A literal block
-....
-This is rendered as-is.
-  Whitespace is preserved.
-    No formatting applied.
-....
-
-.A sidebar (needs custom CSS in reveal.js)
-****
-Sidebars render with a background in standard AsciiDoc output, but reveal.js themes don't style `.sidebarblock`
-(See `kitchensink.css` for how to style it).
-****
-
-// ============================================================
-
-=== Passthrough (Raw HTML)
-
-++++
-<div style="display: flex; gap: 2em; justify-content: center; align-items: center;">
-  <div style="background: #e74c3c; padding: 1em 2em; border-radius: 8px; color: white; font-weight: bold;">Red</div>
-  <div style="background: #2ecc71; padding: 1em 2em; border-radius: 8px; color: white; font-weight: bold;">Green</div>
-  <div style="background: #3498db; padding: 1em 2em; border-radius: 8px; color: white; font-weight: bold;">Blue</div>
-</div>
-++++
-
-Raw HTML passthrough lets you do anything reveal.js supports.
-
-// ============================================================
-
-=== Nested Slides (Vertical)
-
-Navigate *down* with ↓
-
-=== Vertical Slide 1
-
-This is a vertical (nested) slide.
-
-=== Vertical Slide 2
-
-And another one.
-
-// ============================================================
-// SECTION 13: Icons (Font Awesome)
-// ============================================================
-
-== Icons (Font Awesome)
-
-icon:heart[role=red,size=2x] icon:code[size=2x] icon:rocket[size=2x] icon:github[size=2x] icon:java[size=2x]
-
-[cols="1,3",frame=none,grid=none]
-|===
-|icon:check-circle[role=green] |Feature complete
-|icon:exclamation-triangle[role=yellow] |Needs review
-|icon:times-circle[role=red] |Blocked
-|icon:spinner[role=blue] |In progress
-|===
-
-// ============================================================
-// SECTION 14: Video
-// ============================================================
-
-== Embedded Video
-
-video::dQw4w9WgXcQ[youtube,width=800,height=450]
-
-// ============================================================
-// SECTION 15: Auto-animate
-// ============================================================
-
-[%auto-animate]
-== Auto-animate
-
-Matched element will be animated automatically!
-
-[%auto-animate]
-== !
-
-[.highlight]
-Matched element will be animated automatically!
-
-And move to the right position!
-
-[%hardbreaks]
-⬆️
-⬆️
-⬆️
-
-// ============================================================
-// SECTION 16: Keyboard & Shortcut Reference
-// ============================================================
-
-== reveal.js Keyboard Shortcuts
-
-[cols="1,3",options="header"]
-|===
-|Key |Action
-|kbd:[→] / kbd:[Space] |Next slide
-|kbd:[←] |Previous slide
-|kbd:[↑] / kbd:[↓] |Navigate vertical slides
-|kbd:[Esc] / kbd:[O] |Overview mode
-|kbd:[S] |Speaker notes
-|kbd:[F] |Fullscreen
-|kbd:[B] / kbd:[.] |Blackout
-|kbd:[?] |Show keyboard help
-|===
-
 // ============================================================
 
 [%notitle,background-color="#102a43"]
