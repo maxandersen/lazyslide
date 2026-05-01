@@ -1,0 +1,670 @@
+= Kitchen Sink: AsciiDoc Reveal.js
+:author: lazyslide
+:revealjs_theme: black
+:revealjs_slideNumber: c/t
+:revealjs_transition: slide
+:revealjs_transitionSpeed: fast
+:revealjs_hash: true
+:revealjs_history: true
+:revealjs_width: 1920
+:revealjs_height: 1080
+:icons: font
+:source-highlighter: highlightjs
+:highlightjs-theme: https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css
+:highlightjs-languages: java, python, bash, json, yaml, sql, xml, css, javascript
+:stem: latexmath
+:imagesdir: img
+:customcss: css/kitchensink.css
+
+// ============================================================
+// SECTION 1: Basics
+// ============================================================
+
+== Title Slide (Auto)
+
+This slide uses the document title as section header.
+
+Press *Space* or *→* to navigate.
+
+Press *S* for speaker notes.  Press *Esc* for overview.
+
+[NOTE.speaker]
+--
+These are speaker notes — only visible in speaker view.
+
+Press `S` to open the speaker view in a separate window.
+--
+
+// ============================================================
+
+== Text Formatting
+
+*Bold*, _italic_, *_bold italic_*, `monospace`, [.line-through]#strikethrough#
+
+Superscript: E = mc^2^ +
+Subscript: H~2~O
+
+[.small]#Small text# and [.big]#Big text#
+
+Keyboard shortcut: kbd:[Ctrl+Shift+P]
+
+Menu: menu:File[Save As...]
+
+// ============================================================
+
+== Lists
+
+[.columns]
+=== Unordered
+
+* Apples
+** Granny Smith
+** Fuji
+* Oranges
+* Bananas
+
+=== Ordered
+
+. First step
+. Second step
+.. Sub-step A
+.. Sub-step B
+. Third step
+
+=== Description
+
+CPU:: Central Processing Unit
+RAM:: Random Access Memory
+SSD:: Solid State Drive
+
+// ============================================================
+
+== Links & Anchors
+
+* External link: https://asciidoctor.org[Asciidoctor]
+* Link with tooltip: https://revealjs.com[reveal.js, title="The HTML Presentation Framework"]
+* Email: mailto:hello@example.com[Contact Us]
+
+// ============================================================
+// SECTION 2: Fragments (step-by-step reveal)
+// ============================================================
+
+== Fragments
+
+Items appear one at a time:
+
+[%step]
+* First, this appears
+* Then this
+* And finally this
+
+// ============================================================
+
+=== Fragment Styles
+
+[.fade-in]
+Fade in
+
+[.fade-out]
+Fade out
+
+[.highlight-red]
+Highlight red
+
+[.highlight-current-blue]
+Highlight current blue
+
+[.grow]
+Grow
+
+[.shrink]
+Shrink
+
+// ============================================================
+// SECTION 3: Code
+// ============================================================
+
+== Source Code — Java
+
+[source,java]
+----
+public class Hello {
+    public static void main(String[] args) {
+        var message = "Hello, reveal.js!";
+        System.out.println(message);
+
+        var list = List.of("one", "two", "three");
+        list.stream()
+            .map(String::toUpperCase)
+            .forEach(System.out::println);
+    }
+}
+----
+
+// ============================================================
+
+=== Source Code — Python
+
+[source,python]
+----
+from dataclasses import dataclass
+
+@dataclass
+class Slide:
+    title: str
+    content: str
+    fragments: list[str] = None
+
+    def render(self) -> str:
+        return f"== {self.title}\n\n{self.content}"
+
+slides = [Slide("Intro", "Welcome!"), Slide("End", "Thanks!")]
+for slide in slides:
+    print(slide.render())
+----
+
+// ============================================================
+
+=== Source Code with Callouts
+
+[source,bash]
+----
+#!/bin/bash
+set -euo pipefail  # <1>
+
+INPUT="${1:?Usage: render.sh <file>}"  # <2>
+
+echo "Rendering $INPUT..."  # <3>
+lazyslide render "$INPUT"  # <4>
+----
+<1> Strict mode: exit on error, undefined vars, pipe failures
+<2> Require first argument or show usage
+<3> Log what we're doing
+<4> Delegate to lazyslide
+
+// ============================================================
+
+=== Inline Code & Code Blocks
+
+Inline: `System.out.println()` or `SELECT * FROM users`
+
+.A YAML config file
+[source,yaml]
+----
+server:
+  port: 8080
+  host: 0.0.0.0
+
+database:
+  url: jdbc:postgresql://localhost/mydb
+  pool-size: 10
+----
+
+.SQL query
+[source,sql]
+----
+SELECT u.name, COUNT(o.id) AS order_count
+FROM users u
+LEFT JOIN orders o ON o.user_id = u.id
+WHERE u.created_at > '2024-01-01'
+GROUP BY u.name
+ORDER BY order_count DESC
+LIMIT 10;
+----
+
+// ============================================================
+// SECTION 4: Images & Media
+// ============================================================
+
+== Images
+
+image::https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Tux.svg/150px-Tux.svg.png[Tux,150,float=right]
+
+Images can be:
+
+* Inline with text
+* Sized and positioned
+* Loaded from URLs or local files
+
+// ============================================================
+
+=== Background Image
+
+[%notitle]
+=== Image Background
+image::https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1920&q=80[background,size=cover]
+
+Text over a background image.
+
+// ============================================================
+// SECTION 5: Backgrounds
+// ============================================================
+
+[background-color="#1a1a2e"]
+== Colored Backgrounds
+
+Set per-slide background colors with the `background-color` attribute.
+
+// ============================================================
+
+[background-color="#e2e8f0",role=dark-text]
+=== Light Background
+
+Works with light themes too.
+
+// ============================================================
+
+[%notitle,background-color="#16213e"]
+=== Gradient via CSS
+
+++++
+<style>
+.reveal section[data-background-color="#16213e"] {
+  background: linear-gradient(135deg, #16213e 0%, #0f3460 50%, #533483 100%) !important;
+}
+</style>
+++++
+
+This slide uses a CSS gradient background.
+
+// ============================================================
+
+[background-iframe="https://revealjs.com",background-interactive]
+=== Iframe Background
+
+// ============================================================
+// SECTION 6: Layout
+// ============================================================
+
+== Two-Column Layout
+
+[.columns]
+=== !
+
+[.column]
+--
+.Left Column
+* Point one
+* Point two
+* Point three
+--
+
+[.column]
+--
+.Right Column
+[source,json]
+----
+{
+  "layout": "columns",
+  "count": 2
+}
+----
+--
+
+// ============================================================
+
+== Block Quotes
+
+[quote, Albert Einstein]
+____
+Imagination is more important than knowledge. Knowledge is limited.
+Imagination encircles the world.
+____
+
+// ============================================================
+
+[quote, Linus Torvalds, https://lkml.org]
+____
+Talk is cheap. Show me the code.
+____
+
+// ============================================================
+// SECTION 7: Tables
+// ============================================================
+
+== Tables
+
+.Comparison of Approaches
+[cols="2,1,1,1",options="header"]
+|===
+|Feature |AsciiDoc |Markdown |LaTeX
+
+|Slides
+|icon:check[role=green]
+|icon:check[role=green]
+|icon:check[role=green]
+
+|Diagrams
+|icon:check[role=green]
+|icon:times[role=red]
+|icon:check[role=green]
+
+|Live Reload
+|icon:check[role=green]
+|icon:check[role=green]
+|icon:times[role=red]
+
+|Single File
+|icon:check[role=green]
+|icon:times[role=red]
+|icon:times[role=red]
+|===
+
+// ============================================================
+
+=== Table — CSV Data
+
+.Monthly Revenue
+[%header,format=csv]
+|===
+Month,Revenue,Growth
+Jan,$12000,—
+Feb,$14500,+20.8%
+Mar,$13800,-4.8%
+Apr,$16200,+17.4%
+May,$18900,+16.7%
+|===
+
+// ============================================================
+// SECTION 8: Admonitions
+// ============================================================
+
+== Admonitions
+
+NOTE: This is a note — useful for supplementary info.
+
+TIP: This is a tip — a helpful suggestion.
+
+IMPORTANT: This is important — don't skip this.
+
+WARNING: This is a warning — proceed with caution.
+
+CAUTION: This is a caution — danger ahead.
+
+// ============================================================
+// SECTION 9: Math (STEM)
+// ============================================================
+
+== Math with LaTeX
+
+The quadratic formula:
+
+[stem]
+++++
+x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
+++++
+
+Euler's identity: stem:[e^{i\pi} + 1 = 0]
+
+Maxwell's equations:
+
+[stem]
+++++
+\nabla \times \vec{E} = -\frac{\partial \vec{B}}{\partial t}
+++++
+
+// ============================================================
+// SECTION 10: Diagrams
+// ============================================================
+
+== PlantUML Diagram
+
+[plantuml,target=sequence-diagram,format=svg]
+----
+@startuml
+actor User
+participant "lazyslide" as LS
+participant "Asciidoctor" as AD
+participant "Browser" as BR
+
+User -> LS : edit .adoc
+LS -> LS : detect file change
+LS -> AD : render HTML
+AD --> LS : HTML output
+LS -> BR : WebSocket reload
+BR -> BR : refresh page
+@enduml
+----
+
+// ============================================================
+
+=== PlantUML — Class Diagram
+
+[plantuml,target=class-diagram,format=svg]
+----
+@startuml
+skinparam style strictuml
+
+class Presentation {
+  - title: String
+  - slides: List<Slide>
+  + render(): String
+  + export(format: String): Path
+}
+
+class Slide {
+  - content: String
+  - fragments: List<Fragment>
+  + toHtml(): String
+}
+
+class Fragment {
+  - text: String
+  - style: FragmentStyle
+}
+
+enum FragmentStyle {
+  FADE_IN
+  FADE_OUT
+  GROW
+  SHRINK
+  HIGHLIGHT
+}
+
+Presentation "1" *-- "*" Slide
+Slide "1" *-- "*" Fragment
+Fragment --> FragmentStyle
+@enduml
+----
+
+// ============================================================
+
+=== Ditaa Diagram
+
+[ditaa,target=architecture,format=svg]
+----
++------------+   +------------+   +------------+
+|            |   |            |   |            |
+|   Editor   +-->| lazyslide  +-->|  Browser   |
+|            |   |            |   |            |
++-----+------+   +------+-----+   +------+-----+
+      |                 |                |
+      |  .adoc files    | HTML + WS      | Live
+      |                 |                | Reload
+      v                 v                v
+  +-------+     +-----------+     +-----------+
+  | Files  |     | Vert.x    |     | reveal.js |
+  | {s}    |     | HTTP + WS |     | Slides    |
+  +--------+     +-----------+     +-----------+
+----
+
+// ============================================================
+
+// SECTION 11: Transitions
+// ============================================================
+
+[transition=zoom]
+== Zoom Transition
+
+This slide zooms in.
+
+// ============================================================
+
+[transition=fade]
+=== Fade Transition
+
+This slide fades in.
+
+// ============================================================
+
+[transition=convex]
+=== Convex Transition
+
+This slide uses a convex transition.
+
+// ============================================================
+
+[transition=concave]
+=== Concave Transition
+
+This slide uses a concave transition.
+
+// ============================================================
+
+[transition=none]
+=== No Transition
+
+This slide has no transition.
+
+// ============================================================
+// SECTION 12: Advanced Features
+// ============================================================
+
+[transition=slide]
+== Literal & Sidebar Blocks
+
+.A literal block
+....
+This is rendered as-is.
+  Whitespace is preserved.
+    No formatting applied.
+....
+
+.A sidebar
+****
+Sidebars are used for auxiliary content that supplements the main text.
+****
+
+// ============================================================
+
+=== Passthrough (Raw HTML)
+
+++++
+<div style="display: flex; gap: 2em; justify-content: center; align-items: center;">
+  <div style="background: #e74c3c; padding: 1em 2em; border-radius: 8px; color: white; font-weight: bold;">Red</div>
+  <div style="background: #2ecc71; padding: 1em 2em; border-radius: 8px; color: white; font-weight: bold;">Green</div>
+  <div style="background: #3498db; padding: 1em 2em; border-radius: 8px; color: white; font-weight: bold;">Blue</div>
+</div>
+++++
+
+Raw HTML passthrough lets you do anything reveal.js supports.
+
+// ============================================================
+
+=== Nested Slides (Vertical)
+
+Navigate *down* with ↓
+
+=== Vertical Slide 1
+
+This is a vertical (nested) slide.
+
+=== Vertical Slide 2
+
+And another one.
+
+// ============================================================
+// SECTION 13: Icons (Font Awesome)
+// ============================================================
+
+== Icons (Font Awesome)
+
+icon:heart[role=red,size=2x] icon:code[size=2x] icon:rocket[size=2x] icon:github[size=2x] icon:java[size=2x]
+
+[cols="1,3",frame=none,grid=none]
+|===
+|icon:check-circle[role=green] |Feature complete
+|icon:exclamation-triangle[role=yellow] |Needs review
+|icon:times-circle[role=red] |Blocked
+|icon:spinner[role=blue] |In progress
+|===
+
+// ============================================================
+// SECTION 14: Video
+// ============================================================
+
+== Embedded Video
+
+video::dQw4w9WgXcQ[youtube,width=800,height=450]
+
+// ============================================================
+// SECTION 15: Auto-animate
+// ============================================================
+
+[%auto-animate]
+== Auto-Animate
+
+[source,java]
+----
+public class App {
+}
+----
+
+// ============================================================
+
+[%auto-animate]
+== Auto-Animate
+
+[source,java]
+----
+public class App {
+    public static void main(String[] args) {
+    }
+}
+----
+
+// ============================================================
+
+[%auto-animate]
+== Auto-Animate
+
+[source,java]
+----
+public class App {
+    public static void main(String[] args) {
+        System.out.println("Hello!");
+    }
+}
+----
+
+// ============================================================
+// SECTION 16: Keyboard & Shortcut Reference
+// ============================================================
+
+== reveal.js Keyboard Shortcuts
+
+[cols="1,3",options="header"]
+|===
+|Key |Action
+|→ / Space |Next slide
+|← |Previous slide
+|↑ / ↓ |Navigate vertical slides
+|Esc / O |Overview mode
+|S |Speaker notes
+|F |Fullscreen
+|B / . |Blackout
+|? |Show keyboard help
+|===
+
+// ============================================================
+
+[%notitle,background-color="#102a43"]
+== !
+
+[.big]
+That's the kitchen sink!
+
+icon:utensils[size=3x]
+
+Covers: text, code, fragments, tables, math, diagrams, +
+backgrounds, transitions, layout, icons, video, auto-animate.

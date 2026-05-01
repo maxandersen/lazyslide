@@ -1,0 +1,3 @@
+/* Custom styles for kitchen sink demo */
+.dark-text h2, .dark-text p, .dark-text li { color: #1a1a2e !important; }
+.big { font-size: 2em !important; }
