@@ -117,12 +117,28 @@ public class lazyslide implements Runnable {
     String virtualIndexContent;
     boolean open;
     int port = 8181;
+    boolean pdfExport;
 
     /** Default directory names to look for when no argument is given. */
     private static final List<String> DEFAULT_INPUT_DIRS = List.of("slides", "docs");
 
     /** Directories and files that are never mirrored into the output dir. */
     private static final List<String> MIRROR_EXCLUDED = List.of("slides");
+
+    /** File extensions that are mirrored as loose assets from the source root. */
+    private static final Set<String> MIRRORED_FILE_EXTENSIONS = Set.of(
+            "png", "jpg", "jpeg", "gif", "webp", "svg", "ico",
+            "css", "js", "json",
+            "woff", "woff2", "ttf", "otf", "eot",
+            "mp4", "webm", "ogg", "mp3",
+            "pdf"
+    );
+
+    static String fileExtension(Path p) {
+        String name = p.getFileName().toString();
+        int dot = name.lastIndexOf('.');
+        return dot >= 0 ? name.substring(dot + 1).toLowerCase() : "";
+    }
 
     private volatile Asciidoctor asciidoctor;
     private volatile boolean asciidoctorReady;
@@ -167,7 +183,7 @@ public class lazyslide implements Runnable {
      * generate a virtual index.adoc that includes them all.
      * If no argument was given, look for default dirs (slides/, docs/).
      */
-    private void resolveInput() throws IOException {
+    void resolveInput() throws IOException {
         Path path = file.toPath().toAbsolutePath().normalize();
 
         // If the given path doesn't exist and matches the default, try fallbacks
@@ -210,7 +226,7 @@ public class lazyslide implements Runnable {
      * the output dir, and any file starting with '.' or '_'.
      * Returns files sorted by relative path for deterministic ordering.
      */
-    private List<Path> scanAdocFiles(Path dir) throws IOException {
+    List<Path> scanAdocFiles(Path dir) throws IOException {
         Path outDir = outputDir();
         try (var walk = Files.walk(dir)) {
             return walk
@@ -239,7 +255,7 @@ public class lazyslide implements Runnable {
      * Generate a virtual index.adoc that includes all discovered .adoc files
      * using AsciiDoc include directives with leveloffset.
      */
-    private String generateVirtualIndex(Path dir, List<Path> adocFiles) {
+    String generateVirtualIndex(Path dir, List<Path> adocFiles) {
         var sb = new StringBuilder();
         sb.append("= Slides\n");
         sb.append("\n");
@@ -294,7 +310,7 @@ public class lazyslide implements Runnable {
     /**
      * Parse an AsciiDoc file for attribute definitions (:key: value).
      */
-    private Map<String, String> parseAttributesFile(Path file) {
+    Map<String, String> parseAttributesFile(Path file) {
         var attrs = new java.util.LinkedHashMap<String, String>();
         try {
             for (String line : Files.readAllLines(file)) {
@@ -382,7 +398,7 @@ public class lazyslide implements Runnable {
         }
 
         if (!interactive) {
-            // Non-interactive: init synchronously, render, exit
+            // Non-interactive: init synchronously, render
             System.out.println("lazyslide: warming up Asciidoctor...");
             if (inputDir != null) {
                 System.out.println("lazyslide: scanning directory " + inputDir);
@@ -390,8 +406,22 @@ public class lazyslide implements Runnable {
             }
             initAsciidoctor();
             doRender("startup");
+            if (pdfExport) {
+                exportPdfSync();
+            }
             if (open) {
                 openPresentation();
+            }
+            if (serving || watching) {
+                // Headless mode: start server/watcher and block until interrupted
+                try {
+                    if (serving) startServer();
+                    if (watching) startWatcher();
+                    Thread.currentThread().join();
+                } catch (InterruptedException ignored) {
+                } finally {
+                    shutdown();
+                }
             }
             return 0;
         }
@@ -447,6 +477,9 @@ public class lazyslide implements Runnable {
         @Option(names = {"--open"}, description = "Open the deck in your browser after rendering")
         private boolean open;
 
+        @Option(names = {"--pdf"}, description = "Also export a PDF via headless Chrome")
+        private boolean pdf;
+
         @Override
         public Integer call() throws Exception {
             parent.file = file;
@@ -454,6 +487,7 @@ public class lazyslide implements Runnable {
             parent.interactive = false;
             parent.watching = false;
             parent.serving = false;
+            parent.pdfExport = pdf;
             return parent.execute();
         }
     }
@@ -476,7 +510,7 @@ public class lazyslide implements Runnable {
             parent.file = file;
             parent.open = open;
             parent.port = port;
-            parent.interactive = true;
+            parent.interactive = System.console() != null;
             parent.watching = true;
             parent.serving = true;
             return parent.execute();
@@ -497,21 +531,21 @@ public class lazyslide implements Runnable {
         public Integer call() throws Exception {
             parent.file = file;
             parent.open = open;
-            parent.interactive = true;
+            parent.interactive = System.console() != null;
             parent.watching = true;
             parent.serving = false;
             return parent.execute();
         }
     }
 
-    private Path rootDir() {
+    Path rootDir() {
         if (inputDir != null) {
             return inputDir;
         }
         return file.getAbsoluteFile().getParentFile().toPath();
     }
 
-    private String outputName() {
+    String outputName() {
         if (inputDir != null) {
             // Directory mode always produces index.html
             return "index.html";
@@ -521,7 +555,7 @@ public class lazyslide implements Runnable {
 
     private Path serveTempDir;
 
-    private Path outputDir() {
+    Path outputDir() {
         if (serving && serveTempDir != null) {
             return serveTempDir;
         }
@@ -677,6 +711,22 @@ public class lazyslide implements Runnable {
             enqueueMarkup("[red]failed to list source dirs:[/] " + e.getMessage());
         }
 
+        // Mirror loose asset files (images, fonts, css, js, etc.) from source root into output
+        try (var entries = Files.list(rootDir())) {
+            entries.filter(Files::isRegularFile)
+                    .filter(p -> MIRRORED_FILE_EXTENSIONS.contains(fileExtension(p)))
+                    .forEach(src -> {
+                        Path dest = outDir.resolve(src.getFileName().toString());
+                        try {
+                            Files.copy(src, dest, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
+                        } catch (IOException e) {
+                            enqueueMarkup("[red]asset copy failed[/] [yellow]" + src.getFileName() + "[/]: " + e.getMessage());
+                        }
+                    });
+        } catch (IOException e) {
+            enqueueMarkup("[red]failed to list source files:[/] " + e.getMessage());
+        }
+
         // In directory mode, regenerate the virtual index to pick up new/deleted files
         if (inputDir != null && !"startup".equals(reason)) {
             try {
@@ -798,7 +848,7 @@ public class lazyslide implements Runnable {
 
 
 
-    private static String injectLiveReload(String html) {
+    static String injectLiveReload(String html) {
         int i = html.lastIndexOf("</body>");
         if (i >= 0) {
             return html.substring(0, i) + LIVE_RELOAD_SCRIPT + html.substring(i);
@@ -898,7 +948,9 @@ public class lazyslide implements Runnable {
             });
 
             httpServer.listen(port).toCompletionStage().toCompletableFuture().get();
+            port = httpServer.actualPort();
             enqueueMarkup("[green]▶[/] serving at [bold yellow]" + currentUrl() + "[/]");
+
         } catch (Exception e) {
             stopServer();
             Throwable cause = e;
@@ -1128,6 +1180,136 @@ public class lazyslide implements Runnable {
         }
     }
 
+    /**
+     * Find a Chrome/Chromium binary on this system. Returns null if none found.
+     */
+    private static String findChrome() {
+        // Well-known paths in order of preference
+        List<String> candidates = List.of(
+                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+                "/Applications/Chromium.app/Contents/MacOS/Chromium",
+                "google-chrome",
+                "google-chrome-stable",
+                "chromium",
+                "chromium-browser"
+        );
+        for (String c : candidates) {
+            Path p = Path.of(c);
+            if (p.isAbsolute() && Files.isExecutable(p)) return c;
+            if (!p.isAbsolute() && isInPath(c)) return c;
+        }
+        return null;
+    }
+
+    /**
+     * Export the currently rendered deck to PDF using headless Chrome.
+     * Requires the HTTP server to be running so Chrome can fetch the ?print-pdf URL.
+     */
+    private void exportPdf() {
+        if (!serving) {
+            enqueueMarkup("[yellow]pdf export requires serve mode[/]");
+            return;
+        }
+        String chrome = findChrome();
+        if (chrome == null) {
+            enqueueMarkup("[red]no Chrome/Chromium found[/] — install Google Chrome or Chromium for PDF export");
+            return;
+        }
+        String pdfName = outputName().replaceFirst("\\.html$", ".pdf");
+        Path pdfFile = rootDir().resolve(pdfName);
+        String url = "http://localhost:" + port + "/" + outputName() + "?print-pdf";
+        enqueueMarkup("[yellow]⏳[/] exporting PDF via headless Chrome...");
+        Thread.ofVirtual().name("lazyslide-pdf-export").start(() -> {
+            try {
+                Process proc = new ProcessBuilder(
+                        chrome,
+                        "--headless=new",
+                        "--no-pdf-header-footer",
+                        "--print-to-pdf=" + pdfFile.toAbsolutePath(),
+                        "--disable-gpu",
+                        "--no-sandbox",
+                        "--run-all-compositor-stages-before-draw",
+                        url
+                ).redirectErrorStream(true).start();
+                String output = new String(proc.getInputStream().readAllBytes(), StandardCharsets.UTF_8).strip();
+                int exit = proc.waitFor();
+                if (exit == 0 && Files.exists(pdfFile)) {
+                    long size = Files.size(pdfFile);
+                    enqueueMarkup("[green]✔[/] PDF exported: [bold yellow]" + pdfFile + "[/] [cyan](" + formatBytes(size) + ")[/]");
+                } else {
+                    enqueueMarkup("[red]PDF export failed[/] (exit " + exit + ")");
+                    if (!output.isEmpty()) enqueueMarkup("[gray]" + output + "[/]");
+                }
+            } catch (Exception e) {
+                enqueueMarkup("[red]PDF export failed:[/] " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * Export PDF non-interactively: start a temp server, run headless Chrome, stop server.
+     */
+    private void exportPdfSync() throws IOException {
+        String chrome = findChrome();
+        if (chrome == null) {
+            throw new IOException("No Chrome/Chromium found — install Google Chrome or Chromium for PDF export");
+        }
+        // Start a temporary server on a random free port
+        boolean wasServing = serving;
+        int savedPort = port;
+        try {
+            if (!wasServing) {
+                serving = true;
+                port = 0; // let the OS pick a free port
+                if (serveTempDir == null) {
+                    serveTempDir = Files.createTempDirectory("lazyslide_");
+                    serveTempDir.toFile().deleteOnExit();
+                }
+                doRender("pdf export");
+                startServer();
+            }
+            int actualPort = httpServer.actualPort();
+            String pdfName = outputName().replaceFirst("\\.html$", ".pdf");
+            Path pdfFile = rootDir().resolve(pdfName);
+            String url = "http://localhost:" + actualPort + "/" + outputName() + "?print-pdf";
+            System.out.println("lazyslide: exporting PDF via headless Chrome...");
+            Process proc = new ProcessBuilder(
+                    chrome,
+                    "--headless=new",
+                    "--no-pdf-header-footer",
+                    "--print-to-pdf=" + pdfFile.toAbsolutePath(),
+                    "--disable-gpu",
+                    "--no-sandbox",
+                    "--run-all-compositor-stages-before-draw",
+                    url
+            ).redirectErrorStream(true).start();
+            String output = new String(proc.getInputStream().readAllBytes(), StandardCharsets.UTF_8).strip();
+            int exit = proc.waitFor();
+            if (exit == 0 && Files.exists(pdfFile)) {
+                long size = Files.size(pdfFile);
+                System.out.printf("lazyslide: PDF exported to %s (%s)%n", pdfFile, formatBytes(size));
+            } else {
+                System.err.println("lazyslide: PDF export failed (exit " + exit + ")");
+                if (!output.isEmpty()) System.err.println(output);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("PDF export interrupted", e);
+        } finally {
+            if (!wasServing) {
+                stopServer();
+                serving = false;
+                port = savedPort;
+            }
+        }
+    }
+
+    static String formatBytes(long bytes) {
+        if (bytes < 1024) return bytes + "B";
+        if (bytes < 1024 * 1024) return String.format("%.1fKB", bytes / 1024.0);
+        return String.format("%.1fMB", bytes / (1024.0 * 1024.0));
+    }
+
     private void toggleWatch() {
         if (serving) {
             enqueueMarkup("[yellow]watch is locked while serve is on[/]");
@@ -1171,7 +1353,7 @@ public class lazyslide implements Runnable {
         }
     }
 
-    private boolean isIgnoredGeneratedOutput(Path watchedDir, String name) {
+    boolean isIgnoredGeneratedOutput(Path watchedDir, String name) {
         // Output lives in outputDir() which is skipped by the watcher, but a stale
         // pre-split .html sitting in the source root should still be ignored.
         return name.endsWith(".html");
@@ -1257,6 +1439,8 @@ public class lazyslide implements Runnable {
                             text(" "),
                             markupText("[bold white]e[/][gray]dit[/]"),
                             text(" "),
+                            markupText(serving ? "[bold white]p[/][gray]df[/]" : ""),
+                            text(serving ? " " : ""),
                             markupText("[bold white]i[/][gray]nfo[/]"),
                             text(" "),
                             markupText("[bold white]q[/][gray]uit[/]")
@@ -1286,6 +1470,10 @@ public class lazyslide implements Runnable {
                     openEditor();
                     return EventResult.HANDLED;
                 }
+                if (event.isCharIgnoreCase('p')) {
+                    exportPdf();
+                    return EventResult.HANDLED;
+                }
                 if (event.isCharIgnoreCase('i')) {
                     showSource();
                     return EventResult.HANDLED;
@@ -1295,7 +1483,7 @@ public class lazyslide implements Runnable {
         }
     }
 
-    private static String formatNanos(long nanos) {
+    static String formatNanos(long nanos) {
         if (nanos <= 0) {
             return "—";
         }
