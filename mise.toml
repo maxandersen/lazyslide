@@ -10,7 +10,10 @@ description = "Install external diagram tools"
 run = """
 # npm-based tools
 npm install -g @mermaid-js/mermaid-cli @softwaretechnik/dbml-renderer \
-  nomnoml bytefield-svg wavedrom-cli state-machine-cat vega-lite vega-cli 
+  nomnoml bytefield-svg wavedrom-cli state-machine-cat
+
+# Vega-Lite chart tools
+npm install -g vega-lite vega-cli
 
 # pip-based tools
 pip install --user blockdiag

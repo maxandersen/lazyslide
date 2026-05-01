@@ -31,7 +31,9 @@ jobs:
         run: mise run install-diagram-tools
 
       - name: Render slides
-        run: jbang lazyslide.java -o public render README.adoc
+        run: |
+          jbang lazyslide.java -o public render README.adoc
+          mv public/README.html public/index.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

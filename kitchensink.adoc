@@ -948,6 +948,83 @@ https://github.com/lazyslide
 ----
 
 // ============================================================
+// CHARTS
+// ============================================================
+
+=== Vega-Lite — Bar Chart.footnote:vegalite[Requires `vl2vg` and `vg2svg`: `npm install -g vega-lite vega-cli`]
+
+[vegalite,target=vegalite-bar-chart,format=svg,width=25%]
+----
+{
+  "data": {
+    "values": [
+      {"category": "Apples", "value": 28},
+      {"category": "Oranges", "value": 19},
+      {"category": "Bananas", "value": 34},
+      {"category": "Pears", "value": 22}
+    ]
+  },
+  "mark": "bar",
+  "encoding": {
+    "x": {"field": "category", "type": "nominal", "sort": "-y"},
+    "y": {"field": "value", "type": "quantitative"},
+    "color": {"field": "category", "type": "nominal", "legend": null}
+  }
+}
+----
+
+=== Vega-Lite — Line Chart
+
+[vegalite,target=vegalite-line-chart,format=svg]
+----
+{
+  "data": {
+    "values": [
+      {"day": "Mon", "score": 12},
+      {"day": "Tue", "score": 18},
+      {"day": "Wed", "score": 15},
+      {"day": "Thu", "score": 22},
+      {"day": "Fri", "score": 30}
+    ]
+  },
+  "mark": {"type": "line", "point": true},
+  "encoding": {
+    "x": {"field": "day", "type": "ordinal"},
+    "y": {"field": "score", "type": "quantitative"},
+    "tooltip": [
+      {"field": "day", "type": "ordinal"},
+      {"field": "score", "type": "quantitative"}
+    ]
+  }
+}
+----
+
+=== Vega-Lite — Pie Chart
+
+[vegalite,target=vegalite-pie-chart,format=svg]
+----
+{
+  "data": {
+    "values": [
+      {"segment": "Render", "value": 45},
+      {"segment": "Serve", "value": 25},
+      {"segment": "Watch", "value": 20},
+      {"segment": "PDF", "value": 10}
+    ]
+  },
+  "mark": {"type": "arc", "innerRadius": 55},
+  "encoding": {
+    "theta": {"field": "value", "type": "quantitative"},
+    "color": {"field": "segment", "type": "nominal"},
+    "tooltip": [
+      {"field": "segment", "type": "nominal"},
+      {"field": "value", "type": "quantitative"}
+    ]
+  }
+}
+----
+
+// ============================================================
 // DIAGRAMS — Requiring external tools
 // ============================================================
 
@@ -1195,5 +1272,5 @@ That's the kitchen sink!
 
 icon:utensils[size=3x]
 
-Covers: text, code, fragments, tables, math, diagrams, +
+Covers: text, code, fragments, tables, math, charts, diagrams, +
 backgrounds, transitions, layout, icons, video, auto-animate.
