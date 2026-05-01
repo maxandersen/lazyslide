@@ -1003,8 +1003,18 @@ public class lazyslide implements Runnable {
                             }
                             continue;
                         }
-                        if (name.endsWith(".adoc") || name.endsWith(".svg") || name.endsWith(".css") || name.endsWith(".html")) {
-                            Path absolute = watchedDir.resolve(changed);
+                        // Register newly created directories so their contents are watched
+                        Path absolute = watchedDir.resolve(changed);
+                        if (event.kind() == ENTRY_CREATE && Files.isDirectory(absolute)) {
+                            try {
+                                registerRecursive(absolute);
+                                String full = rootDir().relativize(absolute).toString();
+                                enqueueMarkup("[yellow]+[/] watching new dir [cyan]" + full + "[/]");
+                                noteChanged(full);
+                            } catch (IOException e) {
+                                enqueueMarkup("[red]failed to watch new dir:[/] " + e.getMessage());
+                            }
+                        } else if (name.endsWith(".adoc") || name.endsWith(".svg") || name.endsWith(".css") || name.endsWith(".html")) {
                             String full = rootDir().relativize(absolute).toString();
                             enqueueMarkup("[yellow]•[/] changed [cyan]" + full + "[/] [gray][" + event.kind().name() + "][/]");
                             noteChanged(full);
