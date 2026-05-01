@@ -1,17 +1,1 @@
-.reveal .slides section .lead {
-  font-size: 1.6rem;
-  color: #8bd5ff;
-}
-
-.reveal .slides section .small {
-  font-size: 1.0rem;
-  opacity: 0.8;
-}
-
-.reveal pre code {
-  max-height: 28em;
-}
-
-.reveal .slides section.left {
-  text-align: left;
-}
+/* Custom styles for your presentation */
