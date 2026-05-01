@@ -1,0 +1,24 @@
+= {{title}}
+:author: {{author}}
+
+== Render once
+
+[source,bash]
+----
+lazyslide render slides/
+----
+
+== Live preview
+
+[source,bash]
+----
+lazyslide serve slides/
+----
+
+== Project layout
+
+- `slides/` — slide `.adoc` files (scanned in lexicographic order)
+- `slides/_attributes.adoc` — shared reveal.js and theme settings
+- `slides/css/` — custom stylesheets
+- `slides/img/` — images and diagrams
+- `slides/public/` — rendered output (git-ignored)

@@ -1,0 +1,8 @@
+README.adoc
+.gitignore
+slides/index.adoc
+slides/css/presentation.css
+slides/01-title.adoc
+slides/02-story.adoc
+slides/03-closing.adoc
+slides/img/.gitkeep

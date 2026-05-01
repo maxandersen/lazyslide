@@ -1,0 +1,9 @@
+[%notitle, background-color="#102a43"]
+== Thanks
+
+[.lead]
+Now replace this slide with your own closing CTA.
+
+- Share the repo
+- Publish the slides
+- Invite questions

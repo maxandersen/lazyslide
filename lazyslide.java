@@ -17,6 +17,15 @@
 //DEPS dev.tamboui:tamboui-jline3-backend:0.2.0
 //DEPS io.vertx:vertx-web:4.5.13
 //FILES favicon.png
+//FILES templates/default/manifest.txt=templates/default/manifest.txt
+//FILES templates/default/README.adoc=templates/default/README.adoc
+//FILES templates/default/.gitignore=templates/default/.gitignore
+//FILES templates/default/slides/index.adoc=templates/default/slides/index.adoc
+//FILES templates/default/slides/css/presentation.css=templates/default/slides/css/presentation.css
+//FILES templates/default/slides/01-title.adoc=templates/default/slides/01-title.adoc
+//FILES templates/default/slides/02-story.adoc=templates/default/slides/02-story.adoc
+//FILES templates/default/slides/03-closing.adoc=templates/default/slides/03-closing.adoc
+//FILES templates/default/slides/img/.gitkeep=templates/default/slides/img/.gitkeep
 
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
@@ -1584,11 +1593,14 @@ public class lazyslide implements Runnable {
         @Parameters(index = "0", arity = "0..1", defaultValue = ".", description = "Where the starter deck should be created")
         private Path targetDir;
 
+        @Option(names = "--template", defaultValue = "default", description = "Template to use (default: ${DEFAULT-VALUE})")
+        String templateName;
+
         @Option(names = "--title", defaultValue = "My Presentation", description = "Title for the starter deck")
-        private String title;
+        String title;
 
         @Option(names = "--author", description = "Author name for the starter deck (defaults to the current user)")
-        private String author;
+        String author;
 
         @Option(names = "--force", description = "Overwrite starter files if they already exist")
         private boolean force;
@@ -1600,16 +1612,10 @@ public class lazyslide implements Runnable {
             }
 
             Path root = targetDir.toAbsolutePath().normalize();
-            List<TemplateFile> files = List.of(
-                    new TemplateFile("README.adoc", readme(title, author)),
-                    new TemplateFile(".gitignore", gitignore()),
-                    new TemplateFile("slides/index.adoc", indexAdoc(title, author)),
-                    new TemplateFile("slides/css/presentation.css", presentationCss()),
-                    new TemplateFile("slides/01-title.adoc", titleSlide()),
-                    new TemplateFile("slides/02-story.adoc", storySlide()),
-                    new TemplateFile("slides/03-closing.adoc", closingSlide()),
-                    new TemplateFile("slides/img/.gitkeep", "")
-            );
+            List<TemplateFile> files = loadTemplate(templateName, Map.of(
+                    "title", title,
+                    "author", author
+            ));
 
             for (TemplateFile template : files) {
                 Path file = root.resolve(template.relativePath());
@@ -1626,7 +1632,7 @@ public class lazyslide implements Runnable {
                 Files.writeString(file, template.contents());
             }
 
-            System.out.println("lazyslide: starter deck created in " + root);
+            System.out.println("lazyslide: starter deck created in " + root + " (template: " + templateName + ")");
             System.out.println();
             System.out.println("Next steps:");
             System.out.println("  cd " + root);
@@ -1640,108 +1646,43 @@ public class lazyslide implements Runnable {
             return 0;
         }
 
-        private static String readme(String title, String author) {
-            return "= " + title + "\n"
-                    + ":author: " + author + "\n\n"
-                    + "== Render once\n\n"
-                    + "[source,bash]\n"
-                    + "----\n"
-                    + "lazyslide render slides/\n"
-                    + "----\n\n"
-                    + "== Live preview\n\n"
-                    + "[source,bash]\n"
-                    + "----\n"
-                    + "lazyslide serve slides/\n"
-                    + "----\n\n"
-                    + "== Project layout\n\n"
-                    + "- `slides/` — slide `.adoc` files (scanned in lexicographic order)\n"
-                    + "- `slides/_attributes.adoc` — shared reveal.js and theme settings\n"
-                    + "- `slides/css/` — custom stylesheets\n"
-                    + "- `slides/img/` — images and diagrams\n"
-                    + "- `slides/public/` — rendered output (git-ignored)\n";
+        /**
+         * Load a template by name. Reads manifest.txt from classpath, loads each listed file,
+         * and substitutes {{key}} placeholders with the provided variables.
+         */
+        static List<TemplateFile> loadTemplate(String name, Map<String, String> vars) throws IOException {
+            String prefix = "templates/" + name + "/";
+            String manifest = readClasspathResource(prefix + "manifest.txt");
+            if (manifest == null) {
+                throw new IOException("Template not found: " + name + " (no manifest at " + prefix + "manifest.txt)");
+            }
+            var files = new ArrayList<TemplateFile>();
+            for (String line : manifest.lines().toList()) {
+                line = line.strip();
+                if (line.isEmpty() || line.startsWith("#")) continue;
+                String raw = readClasspathResource(prefix + line);
+                if (raw == null) {
+                    throw new IOException("Template file not found: " + prefix + line);
+                }
+                String content = substituteVars(raw, vars);
+                files.add(new TemplateFile(line, content));
+            }
+            return files;
         }
 
-        private static String gitignore() {
-            return "public/\n"
-                    + ".asciidoctor/\n";
+        /** Replace {{key}} placeholders in text with values from the vars map. */
+        static String substituteVars(String text, Map<String, String> vars) {
+            for (var entry : vars.entrySet()) {
+                text = text.replace("{{" + entry.getKey() + "}}", entry.getValue());
+            }
+            return text;
         }
 
-        private static String indexAdoc(String title, String author) {
-            return "= " + title + "\n"
-                    + ":author: " + author + "\n"
-                    + ":icons: font\n"
-                    + ":imagesdir: img\n"
-                    + ":source-highlighter: highlightjs\n"
-                    + ":highlightjs-theme: https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css\n"
-                    + ":highlightjs-languages: java, css, bash\n"
-                    + ":revealjs_theme: black\n"
-                    + ":customcss: css/presentation.css\n"
-                    + ":revealjs_width: 1280\n"
-                    + ":revealjs_height: 720\n"
-                    + ":revealjs_slideNumber: c/t\n"
-                    + ":revealjs_transition: slide\n"
-                    + ":revealjs_transitionSpeed: fast\n"
-                    + ":revealjs_hash: true\n"
-                    + ":revealjs_history: true\n"
-                    + "// :revealjs_showNotes: true\n\n"
-                    + "include::01-title.adoc[]\n\n"
-                    + "include::02-story.adoc[]\n\n"
-                    + "include::03-closing.adoc[]\n";
-        }
-
-        private static String presentationCss() {
-            return ".reveal .slides section .lead {\n"
-                    + "  font-size: 1.6rem;\n"
-                    + "  color: #8bd5ff;\n"
-                    + "}\n\n"
-                    + ".reveal .slides section .small {\n"
-                    + "  font-size: 1.0rem;\n"
-                    + "  opacity: 0.8;\n"
-                    + "}\n\n"
-                    + ".reveal pre code {\n"
-                    + "  max-height: 28em;\n"
-                    + "}\n\n"
-                    + ".reveal .slides section.left {\n"
-                    + "  text-align: left;\n"
-                    + "}\n";
-        }
-
-        private static String titleSlide() {
-            return "[%notitle]\n"
-                    + "== {doctitle}\n\n"
-                    + "[.lead]\n"
-                    + "{author}\n\n"
-                    + "[.small]\n"
-                    + "AsciiDoc slides, reveal.js output, and a relaxed little `lazyslide` live-preview loop.\n";
-        }
-
-        private static String storySlide() {
-            return "[.left]\n"
-                    + "== Why lazyslide?\n\n"
-                    + "- Write slides in AsciiDoc\n"
-                    + "- Render straight to reveal.js\n"
-                    + "- Preview locally with auto-refresh\n"
-                    + "- Keep slides next to your code snippets and images\n\n"
-                    + "=== Live loop\n\n"
-                    + "[source,bash]\n"
-                    + "----\n"
-                    + "lazyslide serve\n"
-                    + "----\n\n"
-                    + "=== Speaker notes\n\n"
-                    + "[NOTE.speaker]\n"
-                    + "--\n"
-                    + "Use this starter deck as your baseline: split slides into files, keep assets local, and iterate in watch mode.\n"
-                    + "--\n";
-        }
-
-        private static String closingSlide() {
-            return "[%notitle, background-color=\"#102a43\"]\n"
-                    + "== Thanks\n\n"
-                    + "[.lead]\n"
-                    + "Now replace this slide with your own closing CTA.\n\n"
-                    + "- Share the repo\n"
-                    + "- Publish the slides\n"
-                    + "- Invite questions\n";
+        private static String readClasspathResource(String path) throws IOException {
+            try (var is = lazyslide.class.getClassLoader().getResourceAsStream(path)) {
+                if (is == null) return null;
+                return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+            }
         }
     }
 

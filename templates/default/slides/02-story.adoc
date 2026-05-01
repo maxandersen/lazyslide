@@ -1,0 +1,21 @@
+[.left]
+== Why lazyslide?
+
+- Write slides in AsciiDoc
+- Render straight to reveal.js
+- Preview locally with auto-refresh
+- Keep slides next to your code snippets and images
+
+=== Live loop
+
+[source,bash]
+----
+lazyslide serve
+----
+
+=== Speaker notes
+
+[NOTE.speaker]
+--
+Use this starter deck as your baseline: split slides into files, keep assets local, and iterate in watch mode.
+--

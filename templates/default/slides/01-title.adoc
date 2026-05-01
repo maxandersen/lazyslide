@@ -1,0 +1,8 @@
+[%notitle]
+== {doctitle}
+
+[.lead]
+{author}
+
+[.small]
+AsciiDoc slides, reveal.js output, and a relaxed little `lazyslide` live-preview loop.

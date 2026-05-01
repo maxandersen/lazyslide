@@ -311,6 +311,30 @@ public class lazyslideTest {
         assertEquals("fade", ls.cliRevealAttributes.get("transition"));
     }
 
+    // ── template loading ─────────────────────────────────────────────────
+
+    @Test
+    void substituteVars_replacesPlaceholders() {
+        String result = lazyslide.Init.substituteVars(
+                "= {{title}}\n:author: {{author}}",
+                Map.of("title", "My Talk", "author", "Jane"));
+        assertEquals("= My Talk\n:author: Jane", result);
+    }
+
+    @Test
+    void substituteVars_leavesUnknownPlaceholders() {
+        String result = lazyslide.Init.substituteVars(
+                "{{title}} and {{unknown}}",
+                Map.of("title", "Hello"));
+        assertEquals("Hello and {{unknown}}", result);
+    }
+
+    @Test
+    void loadTemplate_unknownTemplateThrows() {
+        assertThrows(IOException.class, () ->
+                lazyslide.Init.loadTemplate("nonexistent", Map.of("title", "X", "author", "Y")));
+    }
+
     // ── cycleTheme ─────────────────────────────────────────────────────
 
     @Test
