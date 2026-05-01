@@ -314,34 +314,50 @@ public class lazyslideTest {
     // ── cycleTheme ─────────────────────────────────────────────────────
 
     @Test
-    void cycleTheme_iteratesThemes() {
+    void cycleTheme_iteratesForward() {
         var ls = new lazyslide();
-        // first press starts at first theme
-        ls.cycleTheme();
+        ls.cycleTheme(1);
+        assertEquals("beige", ls.cliAttributes.get("revealjs_theme"));
+        ls.cycleTheme(1);
         assertEquals("black", ls.cliAttributes.get("revealjs_theme"));
-        ls.cycleTheme();
-        assertEquals("white", ls.cliAttributes.get("revealjs_theme"));
+    }
+
+    @Test
+    void cycleTheme_iteratesReverse() {
+        var ls = new lazyslide();
+        ls.cycleTheme(-1);
+        assertEquals("white", ls.cliAttributes.get("revealjs_theme"),
+                "Reverse from default should start at last theme");
+        ls.cycleTheme(-1);
+        assertEquals("solarized", ls.cliAttributes.get("revealjs_theme"));
     }
 
     @Test
     void cycleTheme_wrapsToNoOverride() {
         var ls = new lazyslide();
         int count = lazyslide.REVEAL_THEMES.size();
-        // One press to enter cycling, count presses to go through all, one more to reset
-        for (int i = 0; i <= count; i++) ls.cycleTheme();
+        for (int i = 0; i <= count; i++) ls.cycleTheme(1);
         assertNull(ls.cliAttributes.get("revealjs_theme"),
                 "Should remove override after cycling past all themes");
+    }
+
+    @Test
+    void cycleTheme_reverseWrapsToNoOverride() {
+        var ls = new lazyslide();
+        int count = lazyslide.REVEAL_THEMES.size();
+        for (int i = 0; i <= count; i++) ls.cycleTheme(-1);
+        assertNull(ls.cliAttributes.get("revealjs_theme"),
+                "Should remove override after reverse cycling past all themes");
     }
 
     @Test
     void cycleTheme_resumesAfterReset() {
         var ls = new lazyslide();
         int count = lazyslide.REVEAL_THEMES.size();
-        for (int i = 0; i <= count; i++) ls.cycleTheme();
+        for (int i = 0; i <= count; i++) ls.cycleTheme(1);
         assertNull(ls.cliAttributes.get("revealjs_theme"));
-        // Next press starts at first theme again
-        ls.cycleTheme();
-        assertEquals("black", ls.cliAttributes.get("revealjs_theme"));
+        ls.cycleTheme(1);
+        assertEquals("beige", ls.cliAttributes.get("revealjs_theme"));
     }
 
     // ── outputName ─────────────────────────────────────────────────────

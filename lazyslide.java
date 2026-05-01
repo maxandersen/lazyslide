@@ -147,9 +147,9 @@ public class lazyslide implements Runnable {
     }
 
     static final List<String> REVEAL_THEMES = List.of(
-            "black", "white", "league", "beige", "sky",
-            "night", "serif", "simple", "solarized",
-            "blood", "moon", "dracula");
+            "beige", "black", "blood", "dracula", "league",
+            "moon", "night", "serif", "simple", "sky",
+            "solarized", "white");
     private int themeIndex = -1; // -1 = use configured theme, >=0 = override
 
     private volatile Asciidoctor asciidoctor;
@@ -1406,13 +1406,16 @@ public class lazyslide implements Runnable {
         scheduleRender(reason);
     }
 
-    void cycleTheme() {
+    void cycleTheme() { cycleTheme(1); }
+
+    void cycleTheme(int direction) {
+        int size = REVEAL_THEMES.size();
         if (themeIndex < 0) {
-            // First press: start at first theme
-            themeIndex = 0;
+            // First press: enter cycling
+            themeIndex = direction > 0 ? 0 : size - 1;
         } else {
-            themeIndex++;
-            if (themeIndex >= REVEAL_THEMES.size()) {
+            themeIndex += direction;
+            if (themeIndex >= size || themeIndex < 0) {
                 // Wrap back to "no override"
                 themeIndex = -1;
                 cliAttributes.remove("revealjs_theme");
@@ -1542,8 +1545,12 @@ public class lazyslide implements Runnable {
                     exportPdf();
                     return EventResult.HANDLED;
                 }
-                if (event.isCharIgnoreCase('t')) {
-                    cycleTheme();
+                if (event.isChar('t')) {
+                    cycleTheme(1);
+                    return EventResult.HANDLED;
+                }
+                if (event.isChar('T')) {
+                    cycleTheme(-1);
                     return EventResult.HANDLED;
                 }
                 if (event.isCharIgnoreCase('i')) {
