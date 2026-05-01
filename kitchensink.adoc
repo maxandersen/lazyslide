@@ -384,7 +384,19 @@ WARNING: This is a warning — proceed with caution.
 CAUTION: This is a caution — danger ahead.
 
 // ============================================================
-// SECTION 9: Math (STEM)
+// SECTION 9: Footnotes
+// ============================================================
+
+== Footnotes
+
+AsciiDoc supports inline footnotes.footnote:[This is an inline footnote — it appears at the bottom of the slide.]
+
+You can also reuse them by giving a name.footnote:reuse[This footnote can be referenced again.]
+
+Here's the same footnote again.footnote:reuse[]
+
+// ============================================================
+// SECTION 10: Math (STEM)
 // ============================================================
 
 == Math with LaTeX
@@ -544,7 +556,8 @@ This is rendered as-is.
 
 .A sidebar (needs custom CSS in reveal.js)
 ****
-Sidebars render with a background in standard AsciiDoc output, but reveal.js themes don't style `.sidebarblock` — add your own CSS if you want a visual distinction.
+Sidebars render with a background in standard AsciiDoc output, but reveal.js themes don't style `.sidebarblock`
+(See `kitchensink.css` for how to style it).
 ****
 
 // ============================================================
@@ -604,40 +617,22 @@ video::dQw4w9WgXcQ[youtube,width=800,height=450]
 // ============================================================
 
 [%auto-animate]
-== Auto-Animate
+== Auto-animate
 
-[source,java]
-----
-public class App {
-}
-----
-
-// ============================================================
+Matched element will be animated automatically!
 
 [%auto-animate]
-== Auto-Animate
+== !
 
-[source,java]
-----
-public class App {
-    public static void main(String[] args) {
-    }
-}
-----
+[.highlight]
+Matched element will be animated automatically!
 
-// ============================================================
+And move to the right position!
 
-[%auto-animate]
-== Auto-Animate
-
-[source,java]
-----
-public class App {
-    public static void main(String[] args) {
-        System.out.println("Hello!");
-    }
-}
-----
+[%hardbreaks]
+⬆️
+⬆️
+⬆️
 
 // ============================================================
 // SECTION 16: Keyboard & Shortcut Reference
@@ -648,14 +643,14 @@ public class App {
 [cols="1,3",options="header"]
 |===
 |Key |Action
-|→ / Space |Next slide
-|← |Previous slide
-|↑ / ↓ |Navigate vertical slides
-|Esc / O |Overview mode
-|S |Speaker notes
-|F |Fullscreen
-|B / . |Blackout
-|? |Show keyboard help
+|kbd:[→] / kbd:[Space] |Next slide
+|kbd:[←] |Previous slide
+|kbd:[↑] / kbd:[↓] |Navigate vertical slides
+|kbd:[Esc] / kbd:[O] |Overview mode
+|kbd:[S] |Speaker notes
+|kbd:[F] |Fullscreen
+|kbd:[B] / kbd:[.] |Blackout
+|kbd:[?] |Show keyboard help
 |===
 
 // ============================================================

@@ -1,3 +1,10 @@
 /* Custom styles for kitchen sink demo */
 .dark-text h2, .dark-text p, .dark-text li { color: #1a1a2e !important; }
 .big { font-size: 2em !important; }
+
+/* Sidebar block not styled in reveal.js themes */
+.sidebarblock {                                                                                                                        
+    background: rgba(255,255,255,0.05);                                                                                                  
+    border-left: 3px solid #42affa;                                                                                                      
+    padding: 0.5em 1em;                                                                                                                  
+  }      
