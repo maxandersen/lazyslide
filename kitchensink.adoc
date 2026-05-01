@@ -568,8 +568,9 @@ And move to the right position!
 
 
 
+
 // ============================================================
-// SECTION 10: Diagrams — Built-in (no external tools needed)
+// DIAGRAMS — Built-in (no external tools needed)
 // ============================================================
 
 == Diagrams: PlantUML Sequence
@@ -679,6 +680,27 @@ package "lazyslide" {
 }
 cloud "Browser" {
   [reveal.js] <-- [WebSocket]
+}
+@enduml
+----
+
+// ============================================================
+
+=== PlantUML — Use Case Diagram
+
+[plantuml,target=usecase-diagram,format=svg]
+----
+@startuml
+left to right direction
+actor Author
+actor Audience
+rectangle "lazyslide" {
+  Author -- (Write slides)
+  Author -- (Live preview)
+  Author -- (Export PDF)
+  (Live preview) -- Audience
+  (Export PDF) .> (Render HTML) : includes
+  (Write slides) .> (Render HTML) : triggers
 }
 @enduml
 ----
@@ -810,6 +832,55 @@ asciidoctor:
 
 // ============================================================
 
+=== PlantUML — Timing Diagram
+
+[plantuml,target=timing-diagram,format=svg]
+----
+@startuml
+robust "Browser" as BR
+robust "Server" as SV
+concise "Watcher" as WA
+
+@0
+BR is Idle
+SV is Running
+WA is Watching
+
+@100
+WA is "File Changed"
+
+@200
+SV is Rendering
+
+@300
+SV is Running
+BR is Reloading
+
+@400
+BR is Idle
+@enduml
+----
+
+// ============================================================
+
+=== PlantUML — Network Diagram (nwdiag)
+
+[plantuml,target=network-diagram,format=svg]
+----
+@startnwdiag
+nwdiag {
+  network lan {
+    address = "192.168.1.x"
+    web01 [address = "192.168.1.10"]
+    web02 [address = "192.168.1.11"]
+    db01  [address = "192.168.1.20"]
+  }
+}
+@endnwdiag
+----
+
+// ============================================================
+
 === Ditaa — ASCII Art Diagrams
 
 Ditaa is bundled — no install required.
@@ -832,10 +903,21 @@ Ditaa is bundled — no install required.
 ----
 
 // ============================================================
-// Diagrams requiring external tools
+
+=== QR Code
+
+QR codes are bundled — no install required.
+
+[qrcode,target=qr-demo,format=svg]
+----
+https://github.com/lazyslide
+----
+
+// ============================================================
+// DIAGRAMS — Requiring external tools
 // ============================================================
 
-=== Graphviz.footnote:graphviz[Requires `graphviz` installed: `brew install graphviz` / `apt install graphviz`]
+=== Graphviz.footnote:graphviz[Requires `graphviz`: `brew install graphviz` / `apt install graphviz`]
 
 [graphviz,target=graphviz-diagram,format=svg]
 ----
@@ -849,7 +931,7 @@ digraph G {
 
 // ============================================================
 
-=== Mermaid.footnote:mermaid[Requires `mermaid-cli` installed: `npm install -g @mermaid-js/mermaid-cli`]
+=== Mermaid.footnote:mermaid[Requires `mermaid-cli`: `npm install -g @mermaid-js/mermaid-cli`]
 
 [mermaid,target=mermaid-diagram,format=svg]
 ----
@@ -864,9 +946,9 @@ graph LR
 
 // ============================================================
 
-=== D2.footnote:d2[Requires `d2` installed: `brew install d2` / https://d2lang.com]
+=== D2.footnote:d2[Requires `d2`: `brew install d2` / https://d2lang.com]
 
-[d2,target=d2-diagram,format=svg,width=25%]
+[d2,target=d2-diagram,format=svg]
 ----
 Editor -> lazyslide: .adoc files
 lazyslide -> Browser: HTML + WebSocket
@@ -875,7 +957,7 @@ lazyslide -> PDF: headless Chrome
 
 // ============================================================
 
-=== BlockDiag.footnote:blockdiag[Requires `blockdiag` installed: `pip install blockdiag`]
+=== BlockDiag.footnote:blockdiag[Requires `blockdiag`: `pip install blockdiag`]
 
 [blockdiag,target=blockdiag-diagram,format=svg]
 ----
@@ -890,7 +972,25 @@ blockdiag {
 
 // ============================================================
 
-=== WaveDrom.footnote:wavedrom[Requires `wavedrom-cli` installed: `npm install -g wavedrom-cli`]
+=== ERD.footnote:erd[Requires `erd` or `erd-go`: `go install github.com/kaishuu0123/erd-go@latest`]
+
+[erd,target=erd-diagram,format=svg]
+----
+[Person]
+*name
+height
+weight
+
+[Pet]
+*name
+species
+
+Person *--* Pet
+----
+
+// ============================================================
+
+=== WaveDrom.footnote:wavedrom[Requires `wavedrom-cli`: `npm install -g wavedrom-cli`]
 
 [wavedrom,target=wavedrom-diagram,format=svg]
 ----
@@ -904,12 +1004,11 @@ blockdiag {
 
 // ============================================================
 
-=== Vega-Lite.footnote:vegalite[Requires `vl2vg` and `vg2svg` installed: `npm install -g vega-lite vega-cli`]
+=== Vega-Lite.footnote:vegalite[Requires `vl2vg` and `vg2svg`: `npm install -g vega-lite vega-cli`]
 
 [vegalite,target=vegalite-diagram,format=svg]
 ----
 {
-  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
   "data": {
     "values": [
       {"month": "Jan", "revenue": 12000},
@@ -929,7 +1028,7 @@ blockdiag {
 
 // ============================================================
 
-=== Nomnoml.footnote:nomnoml[Requires `nomnoml` installed: `npm install -g nomnoml`]
+=== Nomnoml.footnote:nomnoml[Requires `nomnoml`: `npm install -g nomnoml`]
 
 [nomnoml,target=nomnoml-diagram,format=svg]
 ----
@@ -941,7 +1040,7 @@ blockdiag {
 
 // ============================================================
 
-=== ByteField.footnote:bytefield[Requires `bytefield-svg` installed: `npm install -g bytefield-svg`]
+=== ByteField.footnote:bytefield[Requires `bytefield-svg`: `npm install -g bytefield-svg`]
 
 [bytefield,target=bytefield-diagram,format=svg]
 ----
@@ -953,7 +1052,220 @@ blockdiag {
 ----
 
 // ============================================================
+
+=== Pikchr.footnote:pikchr[Requires `pikchr`: https://pikchr.org]
+
+[pikchr,target=pikchr-diagram,format=svg]
+----
+arrow right 200% "Source" "Code"
+box rad 10px "lazyslide" fit
+arrow right 200% "HTML" "Output"
+box rad 10px "Browser" fit
+----
+
 // ============================================================
+
+=== SvgBob.footnote:svgbob[Requires `svgbob_cli`: `cargo install svgbob_cli`]
+
+[svgbob,target=svgbob-diagram,format=svg]
+----
+       +----------+
+       |          |
+       | lazyslide|
+       |          |
+       +----+-----+
+            |
+      +-----+-----+
+      |           |
+  +---v---+  +----v----+
+  | HTML  |  | Browser |
+  +-------+  +---------+
+----
+
+// ============================================================
+
+=== DBML.footnote:dbml[Requires `dbml-renderer`: `npm install -g @softwaretechnik/dbml-renderer`]
+
+[dbml,target=dbml-diagram,format=svg]
+----
+Table users {
+  id integer [primary key]
+  username varchar
+  email varchar
+  created_at timestamp
+}
+
+Table presentations {
+  id integer [primary key]
+  title varchar
+  theme varchar
+  user_id integer [ref: > users.id]
+}
+----
+
+// ============================================================
+
+=== Structurizr.footnote:structurizr[Requires Structurizr CLI: https://structurizr.com]
+
+[structurizr,target=structurizr-diagram,format=svg]
+----
+workspace {
+  model {
+    u = person "Author"
+    s = softwareSystem "lazyslide" {
+      renderer = container "Renderer"
+      server = container "HTTP Server"
+      watcher = container "Watcher"
+    }
+    u -> s "Writes slides"
+    watcher -> renderer "Triggers"
+    renderer -> server "Publishes"
+  }
+  views {
+    systemContext s {
+      include *
+    }
+  }
+}
+----
+
+// ============================================================
+
+=== State Machine Cat.footnote:smcat[Requires `smcat`: `npm install -g state-machine-cat`]
+
+[smcat,target=smcat-diagram,format=svg]
+----
+idle -> rendering: file_change,
+rendering -> serving: done,
+serving -> idle: waiting,
+serving -> rendering: file_change,
+serving -> final: quit;
+----
+
+// ============================================================
+
+=== MSC (Message Sequence Chart).footnote:msc[Requires `mscgen`: `brew install mscgen` / `apt install mscgen`]
+
+[msc,target=msc-diagram,format=svg]
+----
+msc {
+  Editor, Lazyslide, Browser;
+  Editor -> Lazyslide [label = "save .adoc"];
+  Lazyslide -> Lazyslide [label = "render"];
+  Lazyslide -> Browser [label = "reload"];
+}
+----
+
+// ============================================================
+
+=== Gnuplot.footnote:gnuplot[Requires `gnuplot`: `brew install gnuplot` / `apt install gnuplot`]
+
+[gnuplot,target=gnuplot-diagram,format=svg]
+----
+set terminal svg
+set title "Render Times"
+set xlabel "Build #"
+set ylabel "Time (ms)"
+plot sin(x) title "render time" with lines
+----
+
+// ============================================================
+
+=== a2s (ASCII to SVG).footnote:a2s[Requires `a2s`: `go install github.com/asciitosvg/asciitosvg/cmd/a2s@latest`]
+
+[a2s,target=a2s-diagram,format=svg]
+----
+ .---.  .---.  .---.
+ | A +->| B +->| C |
+ '---'  '---'  '---'
+----
+
+// ============================================================
+
+=== Symbolator.footnote:symbolator[Requires `symbolator`: `pip install symbolator`]
+
+[symbolator,target=symbolator-diagram,format=svg]
+----
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity counter is
+  port (
+    clk   : in  std_logic;
+    reset : in  std_logic;
+    count : out std_logic_vector(7 downto 0)
+  );
+end entity;
+----
+
+// ============================================================
+
+=== TikZ.footnote:tikz[Requires `pdflatex` (TeX Live / MiKTeX) and `pdf2svg`]
+
+[tikz,target=tikz-diagram,format=svg]
+----
+\begin{tikzpicture}
+  \draw[thick,->] (0,0) -- (4,0) node[right] {x};
+  \draw[thick,->] (0,0) -- (0,3) node[above] {y};
+  \draw[blue, thick] (0,0) parabola (3,2.5);
+  \node at (2,1) {$y = x^2$};
+\end{tikzpicture}
+----
+
+// ============================================================
+
+=== Pintora.footnote:pintora[Requires `pintora`: `npm install -g @nicolo-ribaudo/pintora-cli`]
+
+[pintora,target=pintora-diagram,format=svg]
+----
+sequenceDiagram
+  User ->> lazyslide: edit file
+  lazyslide ->> Browser: reload
+----
+
+// ============================================================
+
+=== UMLet.footnote:umlet[Requires `umlet`: https://www.umlet.com]
+
+[umlet,target=umlet-diagram,format=svg]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<umlet_diagram>
+<element>
+  <type>com.umlet.element.Class</type>
+  <coordinates><x>10</x><y>10</y><w>160</w><h>60</h></coordinates>
+  <panel_attributes>lazyslide
+--
++render()
++serve()</panel_attributes>
+</element>
+</umlet_diagram>
+----
+
+// ============================================================
+
+=== Penrose.footnote:penrose[Requires `roger` (Penrose CLI): https://penrose.cs.cmu.edu — needs .substance, .style, and .domain files]
+
+[penrose,target=penrose-diagram,format=svg]
+----
+Set A
+Set B
+IsSubset(B, A)
+AutoLabel All
+----
+
+// ============================================================
+
+=== VHS (terminal recording).footnote:vhs[Requires `vhs`: `brew install vhs` / `go install github.com/charmbracelet/vhs@latest`]
+
+[vhs,target=vhs-demo,format=gif]
+----
+Set Width 800
+Set Height 400
+Type "lazyslide serve slides/"
+Enter
+Sleep 2s
+----
 
 [%notitle,background-color="#102a43"]
 == !
