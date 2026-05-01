@@ -715,7 +715,7 @@ graph LR
 
 === D2.footnote:d2[Requires `d2` installed: `brew install d2` / https://d2lang.com]
 
-[d2,target=d2-diagram,format=svg]
+[d2,target=d2-diagram,format=svg,width=25%]
 ----
 Editor -> lazyslide: .adoc files
 lazyslide -> Browser: HTML + WebSocket

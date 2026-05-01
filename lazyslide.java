@@ -346,7 +346,7 @@ public class lazyslide implements Runnable {
                 }
             }
         } catch (IOException e) {
-            enqueueMarkup("[red]failed to read[/] [yellow]" + file.getFileName() + "[/]: " + e.getMessage());
+            enqueueMarkup("[red]failed to read[/] [yellow]" + file.getFileName() + "[/]: " + escapeMarkup(e.getMessage()));
         }
         return attrs;
     }
@@ -398,7 +398,7 @@ public class lazyslide implements Runnable {
         asciidoctor.registerLogHandler(new LogHandler() {
             @Override
             public void log(LogRecord logRecord) {
-                enqueueMarkup("[gray]asciidoctor:[/] " + logRecord.getMessage());
+                enqueueMarkup("[gray]asciidoctor:[/] " + escapeMarkup(logRecord.getMessage()));
             }
         });
         asciidoctor.requireLibrary("asciidoctor-revealjs");
@@ -415,7 +415,7 @@ public class lazyslide implements Runnable {
         running = true;
 
         // Route uncaught exceptions to the message log instead of stderr (corrupts TUI)
-        Thread.setDefaultUncaughtExceptionHandler((t, e) -> enqueueMarkup("[red]error[/] [gray][" + t.getName() + "][/]: " + e.getMessage()));
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> enqueueMarkup("[red]error[/] [gray][" + t.getName() + "][/]: " + escapeMarkup(e.getMessage())));
 
         // Resolve input: if it's a directory, generate virtual index
         resolveInput();
@@ -486,7 +486,7 @@ public class lazyslide implements Runnable {
                             .start()
                             .waitFor();
                 } catch (Exception e) {
-                    pendingMarkup.add("[red]editor launch failed:[/] " + e.getMessage());
+                    pendingMarkup.add("[red]editor launch failed:[/] " + escapeMarkup(e.getMessage()));
                 }
             }
             return 0;
@@ -613,6 +613,11 @@ public class lazyslide implements Runnable {
         }
     }
 
+    /** Escape text that may contain characters special to the markup parser (e.g. $, [, ]) */
+    private static String escapeMarkup(String text) {
+        return text.replace("$", "\\$");
+    }
+
     private void enqueueMarkup(String markup) {
         String line = "[gray]" + timestamp() + "[/] " + markup;
         if (tuiApp != null && tuiApp.isReady()) {
@@ -699,7 +704,7 @@ public class lazyslide implements Runnable {
         try {
             Files.createDirectories(outDir);
         } catch (IOException e) {
-            enqueueMarkup("[red]failed to create output dir[/] [yellow]" + outDir + "[/]: " + e.getMessage());
+            enqueueMarkup("[red]failed to create output dir[/] [yellow]" + outDir + "[/]: " + escapeMarkup(e.getMessage()));
             return;
         }
 
@@ -734,11 +739,11 @@ public class lazyslide implements Runnable {
                         try {
                             mirrorDir(from, to);
                         } catch (IOException e) {
-                            enqueueMarkup("[red]asset sync failed[/] [yellow]" + name + "[/]: " + e.getMessage());
+                            enqueueMarkup("[red]asset sync failed[/] [yellow]" + name + "[/]: " + escapeMarkup(e.getMessage()));
                         }
                     });
         } catch (IOException e) {
-            enqueueMarkup("[red]failed to list source dirs:[/] " + e.getMessage());
+            enqueueMarkup("[red]failed to list source dirs:[/] " + escapeMarkup(e.getMessage()));
         }
 
         // Mirror loose asset files (images, fonts, css, js, etc.) from source root into output
@@ -750,11 +755,11 @@ public class lazyslide implements Runnable {
                         try {
                             Files.copy(src, dest, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
                         } catch (IOException e) {
-                            enqueueMarkup("[red]asset copy failed[/] [yellow]" + src.getFileName() + "[/]: " + e.getMessage());
+                            enqueueMarkup("[red]asset copy failed[/] [yellow]" + src.getFileName() + "[/]: " + escapeMarkup(e.getMessage()));
                         }
                     });
         } catch (IOException e) {
-            enqueueMarkup("[red]failed to list source files:[/] " + e.getMessage());
+            enqueueMarkup("[red]failed to list source files:[/] " + escapeMarkup(e.getMessage()));
         }
 
         // In directory mode, regenerate the virtual index to pick up new/deleted files
@@ -769,7 +774,7 @@ public class lazyslide implements Runnable {
                     }
                 }
             } catch (IOException e) {
-                enqueueMarkup("[red]failed to rescan directory:[/] " + e.getMessage());
+                enqueueMarkup("[red]failed to rescan directory:[/] " + escapeMarkup(e.getMessage()));
             }
         }
 
@@ -801,7 +806,7 @@ public class lazyslide implements Runnable {
             try {
                 Files.writeString(targetFile, html);
             } catch (IOException e) {
-                enqueueMarkup("[red]failed to write[/] [yellow]index.html[/]: " + e.getMessage());
+                enqueueMarkup("[red]failed to write[/] [yellow]index.html[/]: " + escapeMarkup(e.getMessage()));
                 return;
             }
         } else {
@@ -982,7 +987,7 @@ public class lazyslide implements Runnable {
                         enqueueMarkup("[green]200[/] [gray]" + req.method() + "[/] " + req.path() + " [dim]" + mime + "[/] [cyan](" + size + "b)[/]");
                     }
                 } catch (IOException e) {
-                    enqueueMarkup("[red]500[/] [gray]" + req.method() + "[/] " + req.path() + " [red]" + e.getMessage() + "[/]");
+                    enqueueMarkup("[red]500[/] [gray]" + req.method() + "[/] " + req.path() + " [red]" + escapeMarkup(e.getMessage()) + "[/]");
                     req.response().setStatusCode(500).end(e.getMessage());
                 }
             });
@@ -1049,7 +1054,7 @@ public class lazyslide implements Runnable {
                                 enqueueMarkup("[yellow]+[/] watching new dir [cyan]" + full + "[/]");
                                 noteChanged(full);
                             } catch (IOException e) {
-                                enqueueMarkup("[red]failed to watch new dir:[/] " + e.getMessage());
+                                enqueueMarkup("[red]failed to watch new dir:[/] " + escapeMarkup(e.getMessage()));
                             }
                         } else if (name.endsWith(".adoc") || name.endsWith(".svg") || name.endsWith(".css") || name.endsWith(".html")) {
                             String full = rootDir().relativize(absolute).toString();
@@ -1063,7 +1068,7 @@ public class lazyslide implements Runnable {
                 }
             } catch (Exception e) {
                 if (running) {
-                    enqueueMarkup("[red]watch stopped:[/] " + e.getMessage());
+                    enqueueMarkup("[red]watch stopped:[/] " + escapeMarkup(e.getMessage()));
                 }
             }
         });
@@ -1130,7 +1135,7 @@ public class lazyslide implements Runnable {
             try {
                 source = Files.readString(file.toPath());
             } catch (IOException e) {
-                tuiApp.logMarkup("[red]failed to read:[/] " + e.getMessage());
+                tuiApp.logMarkup("[red]failed to read:[/] " + escapeMarkup(e.getMessage()));
                 return;
             }
         }
@@ -1199,7 +1204,7 @@ public class lazyslide implements Runnable {
                     enqueueMarkup("[dim]tip: set [bold]VISUAL[/][dim] env var to pick your preferred editor[/]");
                 }
             } catch (Exception e) {
-                enqueueMarkup("[red]editor launch failed:[/] " + e.getMessage());
+                enqueueMarkup("[red]editor launch failed:[/] " + escapeMarkup(e.getMessage()));
             }
         }
     }
@@ -1213,7 +1218,7 @@ public class lazyslide implements Runnable {
                 return;
             }
         } catch (Exception e) {
-            enqueueMarkup("[red]browser open failed:[/] " + e.getMessage());
+            enqueueMarkup("[red]browser open failed:[/] " + escapeMarkup(e.getMessage()));
         }
 
         try {
@@ -1226,7 +1231,7 @@ public class lazyslide implements Runnable {
             }
             enqueueMarkup("opened [yellow]" + currentUrl() + "[/]");
         } catch (Exception e) {
-            enqueueMarkup("[red]could not open browser:[/] " + e.getMessage());
+            enqueueMarkup("[red]could not open browser:[/] " + escapeMarkup(e.getMessage()));
         }
     }
 
@@ -1291,7 +1296,7 @@ public class lazyslide implements Runnable {
                     if (!output.isEmpty()) enqueueMarkup("[gray]" + output + "[/]");
                 }
             } catch (Exception e) {
-                enqueueMarkup("[red]PDF export failed:[/] " + e.getMessage());
+                enqueueMarkup("[red]PDF export failed:[/] " + escapeMarkup(e.getMessage()));
             }
         });
     }
@@ -1373,7 +1378,7 @@ public class lazyslide implements Runnable {
                 startWatcher();
                 requestRender("watch enabled");
             } catch (IOException e) {
-                enqueueMarkup("[red]watch error:[/] " + e.getMessage());
+                enqueueMarkup("[red]watch error:[/] " + escapeMarkup(e.getMessage()));
             }
         } else {
             watching = false;
@@ -1389,7 +1394,7 @@ public class lazyslide implements Runnable {
                     watching = true;
                     startWatcher();
                 } catch (IOException e) {
-                    enqueueMarkup("[red]watch error:[/] " + e.getMessage());
+                    enqueueMarkup("[red]watch error:[/] " + escapeMarkup(e.getMessage()));
                 }
             }
             try {
@@ -1397,7 +1402,7 @@ public class lazyslide implements Runnable {
                 openPresentation();
             } catch (IOException e) {
                 serving = false;
-                enqueueMarkup("[red]" + e.getMessage() + "[/]");
+                enqueueMarkup("[red]" + escapeMarkup(e.getMessage()) + "[/]");
             }
         } else {
             serving = false;
