@@ -1417,7 +1417,6 @@ public class lazyslide implements Runnable {
         themeIndex = (themeIndex + 1) % REVEAL_THEMES.size();
         String theme = REVEAL_THEMES.get(themeIndex);
         cliAttributes.put("revealjs_theme", theme);
-        enqueueMarkup("[bold magenta]theme:[/] [cyan]" + theme + "[/]");
         requestRender("theme → " + theme);
     }
 
@@ -1501,7 +1500,9 @@ public class lazyslide implements Runnable {
                             text(" "),
                             markupText(serving ? "[bold white]p[/][gray]df[/]" : ""),
                             text(serving ? " " : ""),
-                            markupText("[bold white]t[/][gray]heme[/]"),
+                            markupText(themeIndex >= 0
+                                    ? "[bold white]t[/][gray]heme([/][cyan]" + REVEAL_THEMES.get(themeIndex) + "[/][gray])[/]"
+                                    : "[bold white]t[/][gray]heme[/]"),
                             text(" "),
                             markupText("[bold white]i[/][gray]nfo[/]"),
                             text(" "),
