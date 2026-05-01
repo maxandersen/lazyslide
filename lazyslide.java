@@ -109,7 +109,7 @@ import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
 )
 public class lazyslide implements Runnable {
 
-    @Option(names = "--verbose", description = "Show extra watcher chatter too")
+    @Option(names = {"--verbose", "-x"}, description = "Verbose output: show extra watcher chatter and full stack traces on errors")
     boolean verbose;
 
     @Option(names = {"--revealjsdir"}, defaultValue = "https://cdn.jsdelivr.net/npm/reveal.js@5.2.0", description = "Custom reveal.js base URL or directory")
@@ -191,7 +191,21 @@ public class lazyslide implements Runnable {
     private volatile Thread watchThread;
 
     public static void main(String... args) {
-        System.exit(new CommandLine(new lazyslide()).execute(args));
+        var cmd = new CommandLine(new lazyslide());
+        cmd.setExecutionExceptionHandler((ex, commandLine, parseResult) -> {
+            var parent = commandLine.getCommand() instanceof lazyslide ls ? ls
+                    : commandLine.getParent() != null && commandLine.getParent().getCommand() instanceof lazyslide ls ? ls
+                    : null;
+            boolean verbose = parent != null && parent.verbose;
+            if (verbose) {
+                ex.printStackTrace(commandLine.getErr());
+            } else {
+                commandLine.getErr().println("lazyslide: " + ex.getMessage());
+                commandLine.getErr().println("Run with -x for full stack trace.");
+            }
+            return 1;
+        });
+        System.exit(cmd.execute(args));
     }
 
     @Override

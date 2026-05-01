@@ -518,7 +518,26 @@ icon:heart[role=red,size=2x] icon:code[size=2x] icon:rocket[size=2x] icon:github
 |===
 
 // ============================================================
-// SECTION 14: Video
+// SECTION 14: Emoji
+// ============================================================
+
+== Emoji
+
+lazyslide provides an `emoji:name[]` inline macro:
+
+emoji:rocket[] emoji:fire[] emoji:tada[] emoji:thumbs-up[] emoji:heart[] emoji:star[] emoji:check-mark[] emoji:warning[]
+
+emoji:coffee[] emoji:pizza[] emoji:beer[] emoji:sun[] emoji:moon[] emoji:rainbow[] emoji:unicorn[] emoji:sparkles[]
+
+.Usage
+[source,asciidoc]
+----
+emoji:rocket[] Launch day!
+emoji:warning[] Caution ahead.
+----
+
+// ============================================================
+// SECTION 15: Video
 // ============================================================
 
 == Embedded Video
@@ -958,21 +977,6 @@ lazyslide -> PDF: headless Chrome
 
 // ============================================================
 
-=== BlockDiag.footnote:blockdiag[Requires `blockdiag`: `pip install blockdiag`]
-
-[blockdiag,target=blockdiag-diagram,format=svg]
-----
-blockdiag {
-  A [label = "Write"];
-  B [label = "Render"];
-  C [label = "Serve"];
-  D [label = "View"];
-  A -> B -> C -> D;
-}
-----
-
-// ============================================================
-
 === ERD.footnote:erd[Requires `erd` or `erd-go`: `go install github.com/kaishuu0123/erd-go@latest`]
 
 [erd,target=erd-diagram,format=svg]
@@ -1054,18 +1058,6 @@ Person *--* Pet
 
 // ============================================================
 
-/*
-=== Pikchr.footnote:pikchr[Requires `pikchr`: https://pikchr.org]
-
-[pikchr,target=pikchr-diagram,format=svg]
-----
-arrow right 200% "Source" "Code"
-box rad 10px "lazyslide" fit
-arrow right 200% "HTML" "Output"
-box rad 10px "Browser" fit
-----
-*/
-
 // ============================================================
 
 === SvgBob.footnote:svgbob[Requires `svgbob_cli`: `cargo install svgbob_cli`]
@@ -1103,32 +1095,6 @@ Table presentations {
   title varchar
   theme varchar
   user_id integer [ref: > users.id]
-}
-----
-
-// ============================================================
-
-=== Structurizr.footnote:structurizr[Requires Structurizr CLI: https://structurizr.com]
-
-[structurizr,target=structurizr-diagram,format=svg]
-----
-workspace {
-  model {
-    u = person "Author"
-    s = softwareSystem "lazyslide" {
-      renderer = container "Renderer"
-      server = container "HTTP Server"
-      watcher = container "Watcher"
-    }
-    u -> s "Writes slides"
-    watcher -> renderer "Triggers"
-    renderer -> server "Publishes"
-  }
-  views {
-    systemContext s {
-      include *
-    }
-  }
 }
 ----
 
@@ -1185,39 +1151,7 @@ plot sin(x) title "render time" with lines
 
 // ============================================================
 
-=== Symbolator.footnote:symbolator[Requires `symbolator`: `pip install symbolator`]
-
-[symbolator,target=symbolator-diagram,format=svg]
-----
-library ieee;
-use ieee.std_logic_1164.all;
-
-entity counter is
-  port (
-    clk   : in  std_logic;
-    reset : in  std_logic;
-    count : out std_logic_vector(7 downto 0)
-  );
-end entity;
-----
-
-// ============================================================
-
-=== TikZ.footnote:tikz[Requires `pdflatex` (TeX Live / MiKTeX) and `pdf2svg`]
-
-[tikz,target=tikz-diagram,format=svg]
-----
-\begin{tikzpicture}
-  \draw[thick,->] (0,0) -- (4,0) node[right] {x};
-  \draw[thick,->] (0,0) -- (0,3) node[above] {y};
-  \draw[blue, thick] (0,0) parabola (3,2.5);
-  \node at (2,1) {$y = x^2$};
-\end{tikzpicture}
-----
-
-// ============================================================
-
-=== Pintora.footnote:pintora[Requires `pintora`: `npm install -g @nicolo-ribaudo/pintora-cli`]
+=== Pintora.footnote:pintora[Requires `pintora`: `npm i -g @pintora/cli`]
 
 [pintora,target=pintora-diagram,format=svg]
 ----
@@ -1228,44 +1162,13 @@ sequenceDiagram
 
 // ============================================================
 
-=== UMLet.footnote:umlet[Requires `umlet`: https://www.umlet.com]
-
-[umlet,target=umlet-diagram,format=svg]
-----
-<?xml version="1.0" encoding="UTF-8"?>
-<umlet_diagram>
-<element>
-  <type>com.umlet.element.Class</type>
-  <coordinates><x>10</x><y>10</y><w>160</w><h>60</h></coordinates>
-  <panel_attributes>lazyslide
---
-+render()
-+serve()</panel_attributes>
-</element>
-</umlet_diagram>
-----
-
-// ============================================================
-
-=== Penrose.footnote:penrose[Requires `roger` (Penrose CLI): https://penrose.cs.cmu.edu — needs .substance, .style, and .domain files]
-
-[penrose,target=penrose-diagram,format=svg]
-----
-Set A
-Set B
-IsSubset(B, A)
-AutoLabel All
-----
-
-// ============================================================
-
 === VHS (terminal recording).footnote:vhs[Requires `vhs`: `brew install vhs` / `go install github.com/charmbracelet/vhs@latest`]
 
-[vhs,target=vhs-demo,format=gif]
+[tape,target=vhs-demo,format=gif]
 ----
-Set Width 800
+Set Width 1024
 Set Height 400
-Type "lazyslide serve slides/"
+Type "lazyslide serve --port 0 README.adoc"
 Enter
 Sleep 2s
 ----
