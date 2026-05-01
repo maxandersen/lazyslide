@@ -876,8 +876,8 @@ public class lazyslide implements Runnable {
             return;
         }
         try {
-            Path outDir = outputDir();
-            Files.createDirectories(outDir);
+            Files.createDirectories(outputDir());
+            Path outDir = outputDir().toRealPath();
             // Suppress noisy Netty DNS warning on macOS
             java.util.logging.Logger.getLogger("io.netty").setLevel(java.util.logging.Level.SEVERE);
             vertx = Vertx.vertx();
@@ -919,10 +919,18 @@ public class lazyslide implements Runnable {
                     return;
                 }
 
-                Path filePath = outDir.resolve(path.substring(1)).normalize();
-                if (!filePath.startsWith(outDir) || !Files.exists(filePath)) {
+                Path filePath;
+                try {
+                    // toRealPath() resolves symlinks and canonicalizes — safe against traversal
+                    filePath = outDir.resolve(path.substring(1)).toRealPath();
+                } catch (IOException ignored) {
                     enqueueMarkup("[red]404[/] [gray]" + req.method() + "[/] " + req.path());
                     req.response().setStatusCode(404).end("Not found");
+                    return;
+                }
+                if (!filePath.startsWith(outDir)) {
+                    enqueueMarkup("[red]403[/] [gray]" + req.method() + "[/] " + req.path() + " [red]path traversal blocked[/]");
+                    req.response().setStatusCode(403).end("Forbidden");
                     return;
                 }
                 try {

@@ -305,6 +305,51 @@ public class lazyslideITest {
         }
     }
 
+    // ── path traversal ─────────────────────────────────────────────────
+
+    @Test
+    void serve_rejectsPathTraversal(@TempDir Path dir) throws Exception {
+        Path adoc = dir.resolve("deck.adoc");
+        Files.writeString(adoc, """
+                = Test
+                :revealjsdir: https://cdn.jsdelivr.net/npm/reveal.js@5.2.0
+
+                == Slide
+                Content
+                """);
+        // Create a secret file outside the output dir
+        Path secret = dir.resolve("secret.txt");
+        Files.writeString(secret, "TOP SECRET");
+
+        final LineAwait<String> awaitServing = Await
+                .lineMatching(".*http://localhost:(\\d+)/.*")
+                .map(port -> port);
+
+        try (CommandProcess proc = CliAssured
+                .command("jbang", LAZYSLIDE, "serve", "--port", "0", adoc.toString())
+                .stderrToStdout()
+                .autoCloseForcibly()
+                .then()
+                    .stdout()
+                        .await(awaitServing)
+                .start()) {
+
+            String port = awaitServing.await(Duration.ofSeconds(120));
+            Thread.sleep(3000);
+
+            var client = HttpClient.newHttpClient();
+
+            // Try path traversal to read a file outside output dir
+            var response = client.send(
+                    HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/../secret.txt")).build(),
+                    HttpResponse.BodyHandlers.ofString());
+            assertNotEquals(200, response.statusCode(),
+                    "Path traversal should be rejected");
+            assertFalse(response.body().contains("TOP SECRET"),
+                    "Should not leak file content via traversal");
+        }
+    }
+
     // ── help ───────────────────────────────────────────────────────────
 
     @Test
