@@ -13,9 +13,10 @@
 :highlightjs-theme: https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css
 :highlightjs-languages: java, python, bash, json, yaml, sql, xml, css, javascript
 :stem: latexmath
-:experimental:
 :imagesdir: img
 :customcss: css/kitchensink.css
+// to enable kbd, menu and btn
+:experimental:
 
 // ============================================================
 // SECTION 1: Basics
