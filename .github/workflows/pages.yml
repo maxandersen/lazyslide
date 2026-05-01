@@ -28,7 +28,7 @@ jobs:
       - uses: jbangdev/setup-jbang@main
 
       - name: Render slides
-        run: jbang lazyslide.java -o public render index.adoc
+        run: jbang lazyslide.java -o public render README.adoc
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
