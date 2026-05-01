@@ -1408,13 +1408,18 @@ public class lazyslide implements Runnable {
 
     void cycleTheme() {
         if (themeIndex < 0) {
-            // First press: find the current theme so we advance past it
-            String current = cliAttributes.getOrDefault("revealjs_theme",
-                    cliRevealAttributes.getOrDefault("theme", "black"));
-            themeIndex = REVEAL_THEMES.indexOf(current);
-            if (themeIndex < 0) themeIndex = -1;
+            // First press: start at first theme
+            themeIndex = 0;
+        } else {
+            themeIndex++;
+            if (themeIndex >= REVEAL_THEMES.size()) {
+                // Wrap back to "no override"
+                themeIndex = -1;
+                cliAttributes.remove("revealjs_theme");
+                requestRender("theme → default");
+                return;
+            }
         }
-        themeIndex = (themeIndex + 1) % REVEAL_THEMES.size();
         String theme = REVEAL_THEMES.get(themeIndex);
         cliAttributes.put("revealjs_theme", theme);
         requestRender("theme → " + theme);

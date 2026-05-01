@@ -316,29 +316,32 @@ public class lazyslideTest {
     @Test
     void cycleTheme_iteratesThemes() {
         var ls = new lazyslide();
-        // default is black, first cycle should go to white
+        // first press starts at first theme
+        ls.cycleTheme();
+        assertEquals("black", ls.cliAttributes.get("revealjs_theme"));
         ls.cycleTheme();
         assertEquals("white", ls.cliAttributes.get("revealjs_theme"));
-        ls.cycleTheme();
-        assertEquals("league", ls.cliAttributes.get("revealjs_theme"));
     }
 
     @Test
-    void cycleTheme_wrapsAround() {
+    void cycleTheme_wrapsToNoOverride() {
         var ls = new lazyslide();
         int count = lazyslide.REVEAL_THEMES.size();
-        for (int i = 0; i < count; i++) ls.cycleTheme();
-        // After cycling through all themes, should wrap to first
-        assertEquals(lazyslide.REVEAL_THEMES.get(0), ls.cliAttributes.get("revealjs_theme"));
+        // One press to enter cycling, count presses to go through all, one more to reset
+        for (int i = 0; i <= count; i++) ls.cycleTheme();
+        assertNull(ls.cliAttributes.get("revealjs_theme"),
+                "Should remove override after cycling past all themes");
     }
 
     @Test
-    void cycleTheme_startsFromCliOverride() {
+    void cycleTheme_resumesAfterReset() {
         var ls = new lazyslide();
-        ls.cliRevealAttributes.put("theme", "moon");
+        int count = lazyslide.REVEAL_THEMES.size();
+        for (int i = 0; i <= count; i++) ls.cycleTheme();
+        assertNull(ls.cliAttributes.get("revealjs_theme"));
+        // Next press starts at first theme again
         ls.cycleTheme();
-        // moon is index 10, next should be dracula (index 11)
-        assertEquals("dracula", ls.cliAttributes.get("revealjs_theme"));
+        assertEquals("black", ls.cliAttributes.get("revealjs_theme"));
     }
 
     // ── outputName ─────────────────────────────────────────────────────
