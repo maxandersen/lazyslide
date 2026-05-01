@@ -1,4 +1,4 @@
-= Kitchen Sink: AsciiDoc Reveal.js
+== Kitchen Sink: AsciiDoc Reveal.js
 :author: lazyslide
 :revealjs_theme: black
 :revealjs_slideNumber: c/t

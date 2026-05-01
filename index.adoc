@@ -195,3 +195,9 @@ lazyslide serve https://raw.githubusercontent.com/axandersen/lazyslide/main/READ
 ----
 
 Just be aware it will not be able to access relative paths to the file you are rendering.
+
+== Kitchensink
+
+There is a kitchensink file that includes most if not all the features of lazyslide + reveal.js + AsciiDoctor features.
+
+include::kitchensink.adoc[]
