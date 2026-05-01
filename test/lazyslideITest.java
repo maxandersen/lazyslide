@@ -305,6 +305,34 @@ public class lazyslideITest {
         }
     }
 
+    // ── CLI attributes ───────────────────────────────────────────────
+
+    @Test
+    void render_cliAttributeOverride(@TempDir Path dir) throws Exception {
+        Path adoc = dir.resolve("deck.adoc");
+        Path outDir = dir.resolve("output");
+        Files.writeString(adoc, """
+                = Deck
+                :revealjs_theme: black
+
+                == Slide
+                Content
+                """);
+
+        CliAssured
+            .command("jbang", LAZYSLIDE, "-o", outDir.toString(),
+                     "-Rtheme=white", "-Dtransition=none",
+                     "render", adoc.toString())
+            .stderrToStdout()
+            .then()
+                .exitCodeIs(0)
+            .execute()
+            .assertSuccess();
+
+        String html = Files.readString(outDir.resolve("deck.html"));
+        assertTrue(html.contains("white"), "Should use -R overridden theme (white)");
+    }
+
     // ── path traversal ─────────────────────────────────────────────────
 
     @Test

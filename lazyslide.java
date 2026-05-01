@@ -106,6 +106,12 @@ public class lazyslide implements Runnable {
     @Option(names = {"--revealjsdir"}, defaultValue = "https://cdn.jsdelivr.net/npm/reveal.js@5.2.0", description = "Custom reveal.js base URL or directory")
     String revealjsdir;
 
+    @Option(names = "-D", description = "Set an AsciiDoc attribute (e.g. -Dicons=font)", mapFallbackValue = "")
+    Map<String, String> cliAttributes = new java.util.LinkedHashMap<>();
+
+    @Option(names = "-R", description = "Set a reveal.js attribute (e.g. -Rtheme=white sets revealjs_theme)", mapFallbackValue = "")
+    Map<String, String> cliRevealAttributes = new java.util.LinkedHashMap<>();
+
     @Option(names = {"-o", "--output-dir"}, defaultValue = "public", description = "Where lazyslide should write the rendered deck")
     String outputDirName;
 
@@ -350,7 +356,15 @@ public class lazyslide implements Runnable {
             builder.attribute(entry.getKey() + "@", entry.getValue());
         }
 
-        // 3. Internal attributes — hard-set, not overridable
+        // 3. CLI attributes — hard-set, override everything
+        for (var entry : cliAttributes.entrySet()) {
+            builder.attribute(entry.getKey(), entry.getValue());
+        }
+        for (var entry : cliRevealAttributes.entrySet()) {
+            builder.attribute("revealjs_" + entry.getKey(), entry.getValue());
+        }
+
+        // 4. Internal attributes — hard-set, not overridable
         builder.attribute("revealjsdir", revealjsdir);
         builder.attribute("outdir", outDir.toString());
 

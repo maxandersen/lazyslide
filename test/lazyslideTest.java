@@ -291,6 +291,26 @@ public class lazyslideTest {
         assertThrows(IOException.class, ls::resolveInput);
     }
 
+    // ── CLI attributes ───────────────────────────────────────────────────
+
+    @Test
+    void cliAttributes_Dflag() {
+        var ls = new lazyslide();
+        ls.cliAttributes.put("icons", "image");
+        ls.cliAttributes.put("stem", "asciimath");
+        assertEquals("image", ls.cliAttributes.get("icons"));
+        assertEquals("asciimath", ls.cliAttributes.get("stem"));
+    }
+
+    @Test
+    void cliAttributes_Rflag() {
+        var ls = new lazyslide();
+        ls.cliRevealAttributes.put("theme", "white");
+        ls.cliRevealAttributes.put("transition", "fade");
+        assertEquals("white", ls.cliRevealAttributes.get("theme"));
+        assertEquals("fade", ls.cliRevealAttributes.get("transition"));
+    }
+
     // ── outputName ─────────────────────────────────────────────────────
 
     @Test
