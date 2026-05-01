@@ -141,7 +141,6 @@ public class lazyslide implements Runnable {
     }
 
     private volatile Asciidoctor asciidoctor;
-    private volatile boolean asciidoctorReady;
     private WatchService watchService;
     private Vertx vertx;
     private HttpServer httpServer;
@@ -151,9 +150,11 @@ public class lazyslide implements Runnable {
     private volatile String[] pendingEditorCmd = null;
     private final ConcurrentLinkedQueue<String> pendingMarkup = new ConcurrentLinkedQueue<>();
     private final LinkedHashSet<String> pendingChangedFiles = new LinkedHashSet<>();
+    /** Guards {@code pendingChangedFiles} and {@code pendingRender}.
+     *  Lock ordering: never hold {@code this} (doRender) when acquiring stateLock. */
     private final Object stateLock = new Object();
 
-    private volatile ScheduledFuture<?> pendingRender;
+    private ScheduledFuture<?> pendingRender; // guarded by stateLock
     private volatile boolean running;
 
     volatile boolean watching;
@@ -375,7 +376,7 @@ public class lazyslide implements Runnable {
         asciidoctor.requireLibrary("asciidoctor-diagram");
         asciidoctor.requireLibrary("asciidoctor-chart");
         asciidoctor.javaExtensionRegistry().inlineMacro(new EmojiMacro());
-        asciidoctorReady = true;
+        // Single volatile write publishes the fully initialized Asciidoctor instance
         long took = System.nanoTime() - start;
         enqueueMarkup(String.format("[green]✔[/] Asciidoctor ready in [bold]%s[/]", formatNanos(took)));
         scheduleRender("startup");
@@ -656,7 +657,7 @@ public class lazyslide implements Runnable {
     }
 
     private synchronized void doRender(String reason) {
-        if (!asciidoctorReady) {
+        if (asciidoctor == null) {
             enqueueMarkup("[yellow]⏳[/] render skipped: Asciidoctor still loading...");
             return;
         }
@@ -823,10 +824,12 @@ public class lazyslide implements Runnable {
     }
 
     private void scheduleRender(String reason) {
-        if (pendingRender != null) {
-            pendingRender.cancel(false);
+        synchronized (stateLock) {
+            if (pendingRender != null) {
+                pendingRender.cancel(false);
+            }
+            pendingRender = scheduler.schedule(() -> doRender(reason), 180, TimeUnit.MILLISECONDS);
         }
-        pendingRender = scheduler.schedule(() -> doRender(reason), 180, TimeUnit.MILLISECONDS);
     }
 
     private static final String LIVE_RELOAD_SCRIPT = """
@@ -1365,8 +1368,10 @@ public class lazyslide implements Runnable {
 
     private void shutdown() {
         running = false;
-        if (pendingRender != null) {
-            pendingRender.cancel(false);
+        synchronized (stateLock) {
+            if (pendingRender != null) {
+                pendingRender.cancel(false);
+            }
         }
         stopWatcher();
         stopServer();
