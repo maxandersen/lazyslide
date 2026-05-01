@@ -1260,16 +1260,18 @@ public class lazyslide implements Runnable {
         // Start a temporary server on a random free port
         boolean wasServing = serving;
         int savedPort = port;
+        boolean startedServer = false;
         try {
             if (!wasServing) {
-                serving = true;
                 port = 0; // let the OS pick a free port
                 if (serveTempDir == null) {
                     serveTempDir = Files.createTempDirectory("lazyslide_");
                     serveTempDir.toFile().deleteOnExit();
                 }
+                serving = true;
                 doRender("pdf export");
                 startServer();
+                startedServer = true;
             }
             int actualPort = httpServer.actualPort();
             String pdfName = outputName().replaceFirst("\\.html$", ".pdf");
@@ -1300,7 +1302,7 @@ public class lazyslide implements Runnable {
             throw new IOException("PDF export interrupted", e);
         } finally {
             if (!wasServing) {
-                stopServer();
+                if (startedServer) stopServer();
                 serving = false;
                 port = savedPort;
             }
