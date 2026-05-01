@@ -13,7 +13,7 @@ npm install -g @mermaid-js/mermaid-cli @softwaretechnik/dbml-renderer \
   nomnoml bytefield-svg wavedrom-cli state-machine-cat vega-lite vega-cli 
 
 # pip-based tools
-pip install --user blockdiag symbolator
+pip install --user blockdiag
 
 # go-based tools
 go install github.com/asciitosvg/asciitosvg/cmd/a2s@latest
