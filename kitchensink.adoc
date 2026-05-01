@@ -220,7 +220,7 @@ LIMIT 10;
 
 == Images
 
-image::https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Tux.svg/150px-Tux.svg.png[Tux,150,float=right]
+image::https://picsum.photos/536/354[Picsum Photo,with=50%,float=right]
 
 Images can be:
 
@@ -484,7 +484,7 @@ Fragment --> FragmentStyle
       |  .adoc files    | HTML + WS      | Live
       |                 |                | Reload
       v                 v                v
-  +-------+     +-----------+     +-----------+
+  +--------+     +-----------+     +-----------+
   | Files  |     | Vert.x    |     | reveal.js |
   | {s}    |     | HTTP + WS |     | Slides    |
   +--------+     +-----------+     +-----------+
@@ -542,9 +542,9 @@ This is rendered as-is.
     No formatting applied.
 ....
 
-.A sidebar
+.A sidebar (needs custom CSS in reveal.js)
 ****
-Sidebars are used for auxiliary content that supplements the main text.
+Sidebars render with a background in standard AsciiDoc output, but reveal.js themes don't style `.sidebarblock` — add your own CSS if you want a visual distinction.
 ****
 
 // ============================================================
