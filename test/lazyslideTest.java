@@ -148,6 +148,22 @@ public class lazyslideTest {
     }
 
     @Test
+    void parseAttributes_urlValues(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("attrs.adoc");
+        Files.writeString(file, """
+                :highlightjs-theme: https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css
+                :revealjsdir: https://cdn.jsdelivr.net/npm/reveal.js@5.2.0
+                :imagesdir: img
+                """);
+        var ls = new lazyslide();
+        Map<String, String> attrs = ls.parseAttributesFile(file);
+        assertEquals("https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css",
+                attrs.get("highlightjs-theme"), "URL values should not be truncated at colons");
+        assertEquals("https://cdn.jsdelivr.net/npm/reveal.js@5.2.0", attrs.get("revealjsdir"));
+        assertEquals("img", attrs.get("imagesdir"));
+    }
+
+    @Test
     void parseAttributes_emptyFile(@TempDir Path dir) throws IOException {
         Path file = dir.resolve("attrs.adoc");
         Files.writeString(file, "");
