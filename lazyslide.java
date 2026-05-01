@@ -146,6 +146,12 @@ public class lazyslide implements Runnable {
         return dot >= 0 ? name.substring(dot + 1).toLowerCase() : "";
     }
 
+    static final List<String> REVEAL_THEMES = List.of(
+            "black", "white", "league", "beige", "sky",
+            "night", "serif", "simple", "solarized",
+            "blood", "moon", "dracula");
+    private int themeIndex = -1; // -1 = use configured theme, >=0 = override
+
     private volatile Asciidoctor asciidoctor;
     private WatchService watchService;
     private Vertx vertx;
@@ -1400,6 +1406,21 @@ public class lazyslide implements Runnable {
         scheduleRender(reason);
     }
 
+    void cycleTheme() {
+        if (themeIndex < 0) {
+            // First press: find the current theme so we advance past it
+            String current = cliAttributes.getOrDefault("revealjs_theme",
+                    cliRevealAttributes.getOrDefault("theme", "black"));
+            themeIndex = REVEAL_THEMES.indexOf(current);
+            if (themeIndex < 0) themeIndex = -1;
+        }
+        themeIndex = (themeIndex + 1) % REVEAL_THEMES.size();
+        String theme = REVEAL_THEMES.get(themeIndex);
+        cliAttributes.put("revealjs_theme", theme);
+        enqueueMarkup("[bold magenta]theme:[/] [cyan]" + theme + "[/]");
+        requestRender("theme → " + theme);
+    }
+
     private void shutdown() {
         running = false;
         synchronized (stateLock) {
@@ -1480,6 +1501,8 @@ public class lazyslide implements Runnable {
                             text(" "),
                             markupText(serving ? "[bold white]p[/][gray]df[/]" : ""),
                             text(serving ? " " : ""),
+                            markupText("[bold white]t[/][gray]heme[/]"),
+                            text(" "),
                             markupText("[bold white]i[/][gray]nfo[/]"),
                             text(" "),
                             markupText("[bold white]q[/][gray]uit[/]")
@@ -1511,6 +1534,10 @@ public class lazyslide implements Runnable {
                 }
                 if (event.isCharIgnoreCase('p')) {
                     exportPdf();
+                    return EventResult.HANDLED;
+                }
+                if (event.isCharIgnoreCase('t')) {
+                    cycleTheme();
                     return EventResult.HANDLED;
                 }
                 if (event.isCharIgnoreCase('i')) {

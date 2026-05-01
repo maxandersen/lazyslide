@@ -311,6 +311,36 @@ public class lazyslideTest {
         assertEquals("fade", ls.cliRevealAttributes.get("transition"));
     }
 
+    // ── cycleTheme ─────────────────────────────────────────────────────
+
+    @Test
+    void cycleTheme_iteratesThemes() {
+        var ls = new lazyslide();
+        // default is black, first cycle should go to white
+        ls.cycleTheme();
+        assertEquals("white", ls.cliAttributes.get("revealjs_theme"));
+        ls.cycleTheme();
+        assertEquals("league", ls.cliAttributes.get("revealjs_theme"));
+    }
+
+    @Test
+    void cycleTheme_wrapsAround() {
+        var ls = new lazyslide();
+        int count = lazyslide.REVEAL_THEMES.size();
+        for (int i = 0; i < count; i++) ls.cycleTheme();
+        // After cycling through all themes, should wrap to first
+        assertEquals(lazyslide.REVEAL_THEMES.get(0), ls.cliAttributes.get("revealjs_theme"));
+    }
+
+    @Test
+    void cycleTheme_startsFromCliOverride() {
+        var ls = new lazyslide();
+        ls.cliRevealAttributes.put("theme", "moon");
+        ls.cycleTheme();
+        // moon is index 10, next should be dracula (index 11)
+        assertEquals("dracula", ls.cliAttributes.get("revealjs_theme"));
+    }
+
     // ── outputName ─────────────────────────────────────────────────────
 
     @Test
