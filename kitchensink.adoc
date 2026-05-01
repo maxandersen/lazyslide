@@ -418,10 +418,12 @@ Maxwell's equations:
 ++++
 
 // ============================================================
-// SECTION 10: Diagrams
+// SECTION 10: Diagrams — Built-in (no external tools needed)
 // ============================================================
 
-== PlantUML Diagram
+== Diagrams: PlantUML Sequence
+
+PlantUML is bundled — no install required.
 
 [plantuml,target=sequence-diagram,format=svg]
 ----
@@ -462,28 +464,204 @@ class Slide {
   + toHtml(): String
 }
 
-class Fragment {
-  - text: String
-  - style: FragmentStyle
-}
-
 enum FragmentStyle {
   FADE_IN
   FADE_OUT
   GROW
   SHRINK
-  HIGHLIGHT
 }
 
 Presentation "1" *-- "*" Slide
-Slide "1" *-- "*" Fragment
-Fragment --> FragmentStyle
+Slide "1" *-- "*" : Fragment
+Slide --> FragmentStyle
 @enduml
 ----
 
 // ============================================================
 
-=== Ditaa Diagram
+=== PlantUML — Activity Diagram
+
+[plantuml,target=activity-diagram,format=svg]
+----
+@startuml
+start
+:Edit .adoc file;
+:Detect change;
+if (Valid AsciiDoc?) then (yes)
+  :Render HTML;
+  :Notify browser via WebSocket;
+else (no)
+  :Show error in TUI;
+endif
+stop
+@enduml
+----
+
+// ============================================================
+
+=== PlantUML — State Diagram
+
+[plantuml,target=state-diagram,format=svg]
+----
+@startuml
+[*] --> Idle
+Idle --> Rendering : file change
+Rendering --> Serving : done
+Serving --> Idle : waiting
+Serving --> Rendering : file change
+Serving --> [*] : quit
+@enduml
+----
+
+// ============================================================
+
+=== PlantUML — Component Diagram
+
+[plantuml,target=component-diagram,format=svg]
+----
+@startuml
+package "lazyslide" {
+  [CLI] --> [Renderer]
+  [Watcher] --> [Renderer]
+  [Renderer] --> [HTTP Server]
+  [HTTP Server] --> [WebSocket]
+}
+cloud "Browser" {
+  [reveal.js] <-- [WebSocket]
+}
+@enduml
+----
+
+// ============================================================
+
+=== PlantUML — Entity Relationship
+
+[plantuml,target=er-diagram,format=svg]
+----
+@startuml
+entity User {
+  * id : int <<PK>>
+  --
+  name : varchar
+  email : varchar
+}
+entity Presentation {
+  * id : int <<PK>>
+  --
+  title : varchar
+  theme : varchar
+  user_id : int <<FK>>
+}
+User ||--o{ Presentation
+@enduml
+----
+
+// ============================================================
+
+=== PlantUML — Mindmap
+
+[plantuml,target=mindmap-diagram,format=svg]
+----
+@startmindmap
+* Presentation
+** Content
+*** Slides
+*** Speaker Notes
+*** Fragments
+** Assets
+*** Images
+*** CSS
+*** Fonts
+** Build
+*** Render HTML
+*** Export PDF
+*** Live Reload
+@endmindmap
+----
+
+// ============================================================
+
+=== PlantUML — Gantt Chart
+
+[plantuml,target=gantt-diagram,format=svg]
+----
+@startgantt
+Project starts 2026-05-01
+[Design] lasts 5 days
+[Implement] lasts 10 days
+[Implement] starts at [Design]'s end
+[Test] lasts 5 days
+[Test] starts at [Implement]'s end
+[Deploy] lasts 2 days
+[Deploy] starts at [Test]'s end
+@endgantt
+----
+
+// ============================================================
+
+=== PlantUML — Work Breakdown Structure
+
+[plantuml,target=wbs-diagram,format=svg]
+----
+@startwbs
+* Release 1.0
+** Design
+*** Wireframes
+*** Prototypes
+** Development
+*** Frontend
+*** Backend
+*** Integration
+** Testing
+*** Unit Tests
+*** E2E Tests
+** Deployment
+@endwbs
+----
+
+// ============================================================
+
+=== PlantUML — JSON Visualization
+
+[plantuml,target=json-diagram,format=svg]
+----
+@startjson
+{
+  "name": "lazyslide",
+  "version": "1.0",
+  "features": ["render", "serve", "watch", "pdf"],
+  "config": {
+    "port": 8181,
+    "theme": "black",
+    "liveReload": true
+  }
+}
+@endjson
+----
+
+// ============================================================
+
+=== PlantUML — YAML Visualization
+
+[plantuml,target=yaml-diagram,format=svg]
+----
+@startyaml
+server:
+  port: 8181
+  host: localhost
+asciidoctor:
+  backend: revealjs
+  attributes:
+    revealjs_theme: black
+    source-highlighter: highlightjs
+@endyaml
+----
+
+// ============================================================
+
+=== Ditaa — ASCII Art Diagrams
+
+Ditaa is bundled — no install required.
 
 [ditaa,target=architecture,format=svg]
 ----
@@ -500,6 +678,127 @@ Fragment --> FragmentStyle
   | Files  |     | Vert.x    |     | reveal.js |
   | {s}    |     | HTTP + WS |     | Slides    |
   +--------+     +-----------+     +-----------+
+----
+
+// ============================================================
+// Diagrams requiring external tools
+// ============================================================
+
+=== Graphviz.footnote:graphviz[Requires `graphviz` installed: `brew install graphviz` / `apt install graphviz`]
+
+[graphviz,target=graphviz-diagram,format=svg]
+----
+digraph G {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+  AsciiDoc -> Asciidoctor -> "reveal.js" -> Browser;
+  Asciidoctor -> PDF;
+}
+----
+
+// ============================================================
+
+=== Mermaid.footnote:mermaid[Requires `mermaid-cli` installed: `npm install -g @mermaid-js/mermaid-cli`]
+
+[mermaid,target=mermaid-diagram,format=svg]
+----
+graph LR
+    A[Write AsciiDoc] --> B{lazyslide}
+    B -->|render| C[Static HTML]
+    B -->|serve| D[Live Preview]
+    B -->|watch| E[Auto Rebuild]
+    D --> F[Browser]
+    E --> F
+----
+
+// ============================================================
+
+=== D2.footnote:d2[Requires `d2` installed: `brew install d2` / https://d2lang.com]
+
+[d2,target=d2-diagram,format=svg]
+----
+Editor -> lazyslide: .adoc files
+lazyslide -> Browser: HTML + WebSocket
+lazyslide -> PDF: headless Chrome
+----
+
+// ============================================================
+
+=== BlockDiag.footnote:blockdiag[Requires `blockdiag` installed: `pip install blockdiag`]
+
+[blockdiag,target=blockdiag-diagram,format=svg]
+----
+blockdiag {
+  A [label = "Write"];
+  B [label = "Render"];
+  C [label = "Serve"];
+  D [label = "View"];
+  A -> B -> C -> D;
+}
+----
+
+// ============================================================
+
+=== WaveDrom.footnote:wavedrom[Requires `wavedrom-cli` installed: `npm install -g wavedrom-cli`]
+
+[wavedrom,target=wavedrom-diagram,format=svg]
+----
+{ "signal": [
+  { "name": "clk",  "wave": "p.....|..." },
+  { "name": "data", "wave": "x.345x|=.x", "data": ["a","b","c","d"] },
+  { "name": "req",  "wave": "0.1..0|1.0" },
+  { "name": "ack",  "wave": "1.....|01." }
+]}
+----
+
+// ============================================================
+
+=== Vega-Lite.footnote:vegalite[Requires `vl2vg` and `vg2svg` installed: `npm install -g vega-lite vega-cli`]
+
+[vegalite,target=vegalite-diagram,format=svg]
+----
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "data": {
+    "values": [
+      {"month": "Jan", "revenue": 12000},
+      {"month": "Feb", "revenue": 14500},
+      {"month": "Mar", "revenue": 13800},
+      {"month": "Apr", "revenue": 16200},
+      {"month": "May", "revenue": 18900}
+    ]
+  },
+  "mark": "bar",
+  "encoding": {
+    "x": {"field": "month", "type": "nominal"},
+    "y": {"field": "revenue", "type": "quantitative"}
+  }
+}
+----
+
+// ============================================================
+
+=== Nomnoml.footnote:nomnoml[Requires `nomnoml` installed: `npm install -g nomnoml`]
+
+[nomnoml,target=nomnoml-diagram,format=svg]
+----
+[CLI|--port;--verbose] -> [Renderer]
+[Watcher] -> [Renderer]
+[Renderer] -> [HTTP Server]
+[HTTP Server] -> [WebSocket]
+----
+
+// ============================================================
+
+=== ByteField.footnote:bytefield[Requires `bytefield-svg` installed: `npm install -g bytefield-svg`]
+
+[bytefield,target=bytefield-diagram,format=svg]
+----
+(draw-column-headers)
+(draw-box "Version" {:span 4})
+(draw-box "Header Length" {:span 4})
+(draw-box "Type of Service" {:span 8})
+(draw-box "Total Length" {:span 16})
 ----
 
 // ============================================================
