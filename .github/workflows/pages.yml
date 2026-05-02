@@ -34,44 +34,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          themes=(beige black blood dracula league moon night serif simple sky solarized white)
-          build_root="${RUNNER_TEMP}/lazyslide-pages"
-          rm -rf "$build_root" public
-          mkdir -p "$build_root" public
-
-          for theme in "${themes[@]}"; do
-            out="$build_root/$theme"
-            jbang lazyslide.java -o "$out" -Rtheme="$theme" render README.adoc
-            mv "$out/README.html" "$out/index.html"
-            mv "$out" "public/$theme"
-          done
-
-          cat > public/index.html <<'EOF'
-          <!doctype html>
-          <html lang="en">
-            <head>
-              <meta charset="utf-8" />
-              <meta name="viewport" content="width=device-width, initial-scale=1" />
-              <title>lazyslide themes</title>
-              <style>
-                body { font-family: system-ui, sans-serif; margin: 2rem; line-height: 1.5; }
-                ul { columns: 2; max-width: 40rem; }
-                a { text-decoration: none; }
-              </style>
-            </head>
-            <body>
-              <h1>lazyslide theme previews</h1>
-              <p>Pick a reveal.js theme:</p>
-              <ul>
-          EOF
-          for theme in "${themes[@]}"; do
-            printf '                <li><a href="%s/">%s</a></li>\n' "$theme" "$theme"
-          done
-          cat >> public/index.html <<'EOF'
-              </ul>
-            </body>
-          </html>
-          EOF
+          rm -rf public
+          jbang lazyslide.java -o public render README.adoc
+          mv public/README.html public/index.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
