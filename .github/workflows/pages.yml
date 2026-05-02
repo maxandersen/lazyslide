@@ -35,14 +35,15 @@ jobs:
           set -euo pipefail
 
           themes=(beige black blood dracula league moon night serif simple sky solarized white)
-          rm -rf public
-          mkdir -p public
+          build_root="${RUNNER_TEMP}/lazyslide-pages"
+          rm -rf "$build_root" public
+          mkdir -p "$build_root" public
 
           for theme in "${themes[@]}"; do
-            out="public/$theme"
-            mkdir -p "$out"
+            out="$build_root/$theme"
             jbang lazyslide.java -o "$out" -Rtheme="$theme" render README.adoc
             mv "$out/README.html" "$out/index.html"
+            mv "$out" "public/$theme"
           done
 
           cat > public/index.html <<'EOF'
