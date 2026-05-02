@@ -45,34 +45,32 @@ jobs:
             mv "$out/README.html" "$out/index.html"
           done
 
-          {
-            cat <<'EOF'
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>lazyslide themes</title>
-    <style>
-      body { font-family: system-ui, sans-serif; margin: 2rem; line-height: 1.5; }
-      ul { columns: 2; max-width: 40rem; }
-      a { text-decoration: none; }
-    </style>
-  </head>
-  <body>
-    <h1>lazyslide theme previews</h1>
-    <p>Pick a reveal.js theme:</p>
-    <ul>
-EOF
-            for theme in "${themes[@]}"; do
-              printf '      <li><a href="%s/">%s</a></li>\n' "$theme" "$theme"
-            done
-            cat <<'EOF'
-    </ul>
-  </body>
-</html>
-EOF
-          } > public/index.html
+          cat > public/index.html <<'EOF'
+          <!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1" />
+              <title>lazyslide themes</title>
+              <style>
+                body { font-family: system-ui, sans-serif; margin: 2rem; line-height: 1.5; }
+                ul { columns: 2; max-width: 40rem; }
+                a { text-decoration: none; }
+              </style>
+            </head>
+            <body>
+              <h1>lazyslide theme previews</h1>
+              <p>Pick a reveal.js theme:</p>
+              <ul>
+          EOF
+          for theme in "${themes[@]}"; do
+            printf '                <li><a href="%s/">%s</a></li>\n' "$theme" "$theme"
+          done
+          cat >> public/index.html <<'EOF'
+              </ul>
+            </body>
+          </html>
+          EOF
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
