@@ -5,7 +5,7 @@
 :experimental:
 :imagesdir: img
 :source-highlighter: highlightjs
-:highlightjs-theme: https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css
+:highlightjs-theme: https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.3/styles/atom-one-dark.min.css
 :highlightjs-languages: java, css, bash
 :revealjs_theme: black
 :customcss: css/presentation.css

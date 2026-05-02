@@ -151,14 +151,13 @@ public class lazyslideTest {
     void parseAttributes_urlValues(@TempDir Path dir) throws IOException {
         Path file = dir.resolve("attrs.adoc");
         Files.writeString(file, """
-                :highlightjs-theme: https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css
+                :highlightjs-theme: https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.3/styles/atom-one-dark.min.css
                 :revealjsdir: https://cdn.jsdelivr.net/npm/reveal.js@5.2.0
                 :imagesdir: img
                 """);
         var ls = new lazyslide();
         Map<String, String> attrs = ls.parseAttributesFile(file);
-        assertEquals("https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css",
-                attrs.get("highlightjs-theme"), "URL values should not be truncated at colons");
+        assertEquals("https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.3/styles/atom-one-dark.min.css", attrs.get("highlightjs-theme"));
         assertEquals("https://cdn.jsdelivr.net/npm/reveal.js@5.2.0", attrs.get("revealjsdir"));
         assertEquals("img", attrs.get("imagesdir"));
     }
@@ -335,7 +334,7 @@ public class lazyslideTest {
                 lazyslide.Init.loadTemplate("nonexistent", Map.of("title", "X", "author", "Y")));
     }
 
-    // ── cycleTheme ─────────────────────────────────────────────────────
+    // ── cycleTheme / cycleHighlightTheme ─────────────────────────────────
 
     @Test
     void cycleTheme_iteratesForward() {
@@ -382,6 +381,48 @@ public class lazyslideTest {
         assertNull(ls.cliAttributes.get("revealjs_theme"));
         ls.cycleTheme(1);
         assertEquals("beige", ls.cliAttributes.get("revealjs_theme"));
+    }
+
+    @Test
+    void cycleHighlightTheme_iteratesForward() {
+        var ls = new lazyslide();
+        ls.cycleHighlightTheme(1);
+        assertEquals("https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.3/styles/a11y-dark.min.css",
+                ls.cliAttributes.get("highlightjs-theme"));
+        ls.cycleHighlightTheme(1);
+        assertEquals("https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.3/styles/a11y-light.min.css",
+                ls.cliAttributes.get("highlightjs-theme"));
+    }
+
+    @Test
+    void cycleHighlightTheme_iteratesReverse() {
+        var ls = new lazyslide();
+        ls.cycleHighlightTheme(-1);
+        assertEquals("https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.3/styles/zenburn.min.css",
+                ls.cliAttributes.get("highlightjs-theme"),
+                "Reverse from default should start at last theme");
+        ls.cycleHighlightTheme(-1);
+        assertEquals("https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.3/styles/xt256.min.css",
+                ls.cliAttributes.get("highlightjs-theme"));
+    }
+
+    @Test
+    void cycleHighlightTheme_wrapsToNoOverride() {
+        var ls = new lazyslide();
+        int count = lazyslide.HIGHLIGHT_THEMES.size();
+        for (int i = 0; i <= count; i++) ls.cycleHighlightTheme(1);
+        assertNull(ls.cliAttributes.get("highlightjs-theme"),
+                "Should remove override after cycling past all highlight themes");
+    }
+
+    @Test
+    void toggleDetailedLogging_flipsState() {
+        var ls = new lazyslide();
+        assertFalse(ls.isDetailedLogging());
+        ls.toggleDetailedLogging();
+        assertTrue(ls.isDetailedLogging());
+        ls.toggleDetailedLogging();
+        assertFalse(ls.isDetailedLogging());
     }
 
     // ── outputName ─────────────────────────────────────────────────────

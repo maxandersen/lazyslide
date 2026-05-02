@@ -159,7 +159,33 @@ public class lazyslide implements Runnable {
             "beige", "black", "blood", "dracula", "league",
             "moon", "night", "serif", "simple", "sky",
             "solarized", "white");
+    static final List<String> HIGHLIGHT_THEMES = List.of(
+            "a11y-dark", "a11y-light", "agate", "an-old-hope",
+            "androidstudio", "arduino-light", "arta", "ascetic",
+            "atelier-cave-dark", "atelier-cave-light", "atelier-dune-dark", "atelier-dune-light",
+            "atelier-estuary-dark", "atelier-estuary-light", "atelier-forest-dark", "atelier-forest-light",
+            "atelier-heath-dark", "atelier-heath-light", "atelier-lakeside-dark", "atelier-lakeside-light",
+            "atelier-plateau-dark", "atelier-plateau-light", "atelier-savanna-dark", "atelier-savanna-light",
+            "atelier-seaside-dark", "atelier-seaside-light", "atelier-sulphurpool-dark", "atelier-sulphurpool-light",
+            "atom-one-dark-reasonable", "atom-one-dark", "atom-one-light", "brown-paper",
+            "codepen-embed", "color-brewer", "darcula", "dark",
+            "darkula", "default", "docco", "dracula",
+            "far", "foundation", "github-gist", "github",
+            "gml", "googlecode", "gradient-dark", "grayscale",
+            "gruvbox-dark", "gruvbox-light", "hopscotch", "hybrid",
+            "idea", "ir-black", "isbl-editor-dark", "isbl-editor-light",
+            "kimbie.dark", "kimbie.light", "lightfair", "magula",
+            "mono-blue", "monokai-sublime", "monokai", "night-owl",
+            "nord", "obsidian", "ocean", "paraiso-dark",
+            "paraiso-light", "pojoaque", "purebasic", "qtcreator_dark",
+            "qtcreator_light", "railscasts", "rainbow", "routeros",
+            "school-book", "shades-of-purple", "solarized-dark", "solarized-light",
+            "sunburst", "tomorrow-night-blue", "tomorrow-night-bright", "tomorrow-night-eighties",
+            "tomorrow-night", "tomorrow", "vs", "vs2015",
+            "xcode", "xt256", "zenburn");
     private int themeIndex = -1; // -1 = use configured theme, >=0 = override
+    private int highlightThemeIndex = -1; // -1 = use configured highlight theme, >=0 = override
+    private boolean detailedLogging;
 
     private volatile Asciidoctor asciidoctor;
     private WatchService watchService;
@@ -309,7 +335,7 @@ public class lazyslide implements Runnable {
     private static final Map<String, String> DEFAULT_ATTRIBUTES = Map.ofEntries(
             Map.entry("icons", "font"),
             Map.entry("source-highlighter", "highlightjs"),
-            Map.entry("highlightjs-theme", "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css"),
+            Map.entry("highlightjs-theme", "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.3/styles/atom-one-dark.min.css"),
             Map.entry("revealjs_theme", "black"),
             Map.entry("revealjs_transition", "slide"),
             Map.entry("stem", "latexmath"),
@@ -645,6 +671,18 @@ public class lazyslide implements Runnable {
         }
     }
 
+    private void enqueueDetailedMarkup(String markup) {
+        if (detailedLogging) {
+            enqueueMarkup(markup);
+        }
+    }
+
+    private void enqueueDetailedMessage(String msg) {
+        if (detailedLogging) {
+            enqueueMessage(msg);
+        }
+    }
+
     private void flushPendingMarkup() {
         String line;
         while ((line = pendingMarkup.poll()) != null) {
@@ -973,12 +1011,12 @@ public class lazyslide implements Runnable {
                     // toRealPath() resolves symlinks and canonicalizes — safe against traversal
                     filePath = outDir.resolve(path.substring(1)).toRealPath();
                 } catch (IOException ignored) {
-                    enqueueMarkup("[red]404[/] [gray]" + req.method() + "[/] " + req.path());
+                    enqueueDetailedMarkup("[red]404[/] [gray]" + req.method() + "[/] " + req.path());
                     req.response().setStatusCode(404).end("Not found");
                     return;
                 }
                 if (!filePath.startsWith(outDir)) {
-                    enqueueMarkup("[red]403[/] [gray]" + req.method() + "[/] " + req.path() + " [red]path traversal blocked[/]");
+                    enqueueDetailedMarkup("[red]403[/] [gray]" + req.method() + "[/] " + req.path() + " [red]path traversal blocked[/]");
                     req.response().setStatusCode(403).end("Forbidden");
                     return;
                 }
@@ -994,15 +1032,15 @@ public class lazyslide implements Runnable {
                         byte[] body = html.getBytes(StandardCharsets.UTF_8);
                         resp.putHeader("Content-Type", "text/html; charset=utf-8");
                         resp.end(io.vertx.core.buffer.Buffer.buffer(body));
-                        enqueueMarkup("[green]200[/] [gray]" + req.method() + "[/] " + req.path() + " [cyan](" + body.length + "b)[/]");
+                        enqueueDetailedMarkup("[green]200[/] [gray]" + req.method() + "[/] " + req.path() + " [cyan](" + body.length + "b)[/]");
                     } else {
                         long size = Files.size(filePath);
                         resp.putHeader("Content-Type", mime);
                         resp.sendFile(filePath.toString());
-                        enqueueMarkup("[green]200[/] [gray]" + req.method() + "[/] " + req.path() + " [dim]" + mime + "[/] [cyan](" + size + "b)[/]");
+                        enqueueDetailedMarkup("[green]200[/] [gray]" + req.method() + "[/] " + req.path() + " [dim]" + mime + "[/] [cyan](" + size + "b)[/]");
                     }
                 } catch (IOException e) {
-                    enqueueMarkup("[red]500[/] [gray]" + req.method() + "[/] " + req.path() + " [red]" + escapeMarkup(e.getMessage()) + "[/]");
+                    enqueueDetailedMarkup("[red]500[/] [gray]" + req.method() + "[/] " + req.path() + " [red]" + escapeMarkup(e.getMessage()) + "[/]");
                     req.response().setStatusCode(500).end(e.getMessage());
                 }
             });
@@ -1056,7 +1094,7 @@ public class lazyslide implements Runnable {
                         String name = changed.getFileName().toString();
                         if (isIgnoredGeneratedOutput(watchedDir, name)) {
                             if (verbose) {
-                                enqueueMarkup("[dim]ignored[/] [gray]" + name + " [" + event.kind().name() + "][/]");
+                                enqueueDetailedMarkup("[dim]ignored[/] [gray]" + name + " [" + event.kind().name() + "][/]");
                             }
                             continue;
                         }
@@ -1066,17 +1104,17 @@ public class lazyslide implements Runnable {
                             try {
                                 registerRecursive(absolute);
                                 String full = rootDir().relativize(absolute).toString();
-                                enqueueMarkup("[yellow]+[/] watching new dir [cyan]" + full + "[/]");
+                                enqueueDetailedMarkup("[yellow]+[/] watching new dir [cyan]" + full + "[/]");
                                 noteChanged(full);
                             } catch (IOException e) {
-                                enqueueMarkup("[red]failed to watch new dir:[/] " + escapeMarkup(e.getMessage()));
+                                enqueueDetailedMarkup("[red]failed to watch new dir:[/] " + escapeMarkup(e.getMessage()));
                             }
                         } else if (name.endsWith(".adoc") || name.endsWith(".svg") || name.endsWith(".css") || name.endsWith(".html")) {
                             String full = rootDir().relativize(absolute).toString();
-                            enqueueMarkup("[yellow]•[/] changed [cyan]" + full + "[/] [gray][" + event.kind().name() + "][/]");
+                            enqueueDetailedMarkup("[yellow]•[/] changed [cyan]" + full + "[/] [gray][" + event.kind().name() + "][/]");
                             noteChanged(full);
                         } else if (verbose) {
-                            enqueueMarkup("[dim]ignored[/] [gray]" + name + " [" + event.kind().name() + "][/]");
+                            enqueueDetailedMarkup("[dim]ignored[/] [gray]" + name + " [" + event.kind().name() + "][/]");
                         }
                     }
                     key.reset();
@@ -1438,23 +1476,45 @@ public class lazyslide implements Runnable {
     void cycleTheme() { cycleTheme(1); }
 
     void cycleTheme(int direction) {
-        int size = REVEAL_THEMES.size();
-        if (themeIndex < 0) {
-            // First press: enter cycling
-            themeIndex = direction > 0 ? 0 : size - 1;
+        themeIndex = cycleIndexedOption(REVEAL_THEMES, themeIndex, direction, "revealjs_theme", "theme", value -> value);
+    }
+
+    void cycleHighlightTheme() { cycleHighlightTheme(1); }
+
+    void cycleHighlightTheme(int direction) {
+        highlightThemeIndex = cycleIndexedOption(HIGHLIGHT_THEMES, highlightThemeIndex, direction, "highlightjs-theme", "highlight", lazyslide::highlightThemeUrl);
+    }
+
+    void toggleDetailedLogging() {
+        detailedLogging = !detailedLogging;
+        enqueueMarkup(detailedLogging ? "[green]detailed logging on[/]" : "[yellow]detailed logging off[/]");
+        requestRender("detailed logging");
+    }
+
+    boolean isDetailedLogging() {
+        return detailedLogging;
+    }
+
+    private static String highlightThemeUrl(String theme) {
+        return "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.3/styles/" + theme + ".min.css";
+    }
+
+    private int cycleIndexedOption(List<String> options, int currentIndex, int direction, String attributeKey, String label, java.util.function.Function<String, String> valueMapper) {
+        int size = options.size();
+        if (currentIndex < 0) {
+            currentIndex = direction > 0 ? 0 : size - 1;
         } else {
-            themeIndex += direction;
-            if (themeIndex >= size || themeIndex < 0) {
-                // Wrap back to "no override"
-                themeIndex = -1;
-                cliAttributes.remove("revealjs_theme");
-                requestRender("theme → default");
-                return;
+            currentIndex += direction;
+            if (currentIndex >= size || currentIndex < 0) {
+                cliAttributes.remove(attributeKey);
+                requestRender(label + " → default");
+                return -1;
             }
         }
-        String theme = REVEAL_THEMES.get(themeIndex);
-        cliAttributes.put("revealjs_theme", theme);
-        requestRender("theme → " + theme);
+        String theme = options.get(currentIndex);
+        cliAttributes.put(attributeKey, valueMapper.apply(theme));
+        requestRender(label + " → " + theme);
+        return currentIndex;
     }
 
     private void shutdown() {
@@ -1541,6 +1601,12 @@ public class lazyslide implements Runnable {
                                     ? "[bold white]t[/][gray]heme([/][cyan]" + REVEAL_THEMES.get(themeIndex) + "[/][gray])[/]"
                                     : "[bold white]t[/][gray]heme[/]"),
                             text(" "),
+                            markupText(highlightThemeIndex >= 0
+                                    ? "[bold white]h[/][gray]ighlight([/][cyan]" + HIGHLIGHT_THEMES.get(highlightThemeIndex) + "[/][gray])[/]"
+                                    : "[bold white]h[/][gray]ighlight[/]"),
+                            text(" "),
+                            markupText(detailedLogging ? "[bold white]l[/][gray]og(detail)[/]" : "[bold white]l[/][gray]og[/]"),
+                            text(" "),
                             markupText("[bold white]i[/][gray]nfo[/]"),
                             text(" "),
                             markupText("[bold white]q[/][gray]uit[/]")
@@ -1580,6 +1646,18 @@ public class lazyslide implements Runnable {
                 }
                 if (event.isChar('T')) {
                     cycleTheme(-1);
+                    return EventResult.HANDLED;
+                }
+                if (event.isChar('h')) {
+                    cycleHighlightTheme(1);
+                    return EventResult.HANDLED;
+                }
+                if (event.isChar('H')) {
+                    cycleHighlightTheme(-1);
+                    return EventResult.HANDLED;
+                }
+                if (event.isCharIgnoreCase('l')) {
+                    toggleDetailedLogging();
                     return EventResult.HANDLED;
                 }
                 if (event.isCharIgnoreCase('i')) {

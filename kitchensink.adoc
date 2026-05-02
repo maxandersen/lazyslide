@@ -1,6 +1,6 @@
 == Kitchen Sink: AsciiDoc Reveal.js
 :author: lazyslide
-:revealjs_theme: black
+:revealjs_theme: dracula
 :revealjs_slideNumber: c/t
 :revealjs_transition: slide
 :revealjs_transitionSpeed: fast
@@ -10,7 +10,7 @@
 :revealjs_height: 1080
 :icons: font
 :source-highlighter: highlightjs
-:highlightjs-theme: https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css
+:highlightjs-theme: https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.3/styles/atom-one-dark.min.css
 :highlightjs-languages: java, python, bash, json, yaml, sql, xml, css, javascript
 :stem: latexmath
 :customcss: css/kitchensink.css

@@ -4,9 +4,9 @@
 image::./logo.png[lazyslide logo,300]
 :icons: font
 :source-highlighter: highlightjs
-:highlightjs-theme: https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css
+:highlightjs-theme: https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.3/styles/atom-one-dark.min.css
 :highlightjs-languages: bash
-:revealjs_theme: black
+:revealjs_theme: dracula
 :revealjs_transition: slide
 :revealjs_hash: true
 :revealjs_history: true
