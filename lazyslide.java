@@ -186,6 +186,7 @@ public class lazyslide implements Runnable {
     private int themeIndex = -1; // -1 = use configured theme, >=0 = override
     private int highlightThemeIndex = -1; // -1 = use configured highlight theme, >=0 = override
     private boolean detailedLogging;
+    private boolean browserOpened;
 
     private volatile Asciidoctor asciidoctor;
     private WatchService watchService;
@@ -1267,6 +1268,7 @@ public class lazyslide implements Runnable {
             URI uri = URI.create(currentUrl());
             if (Desktop.isDesktopSupported()) {
                 Desktop.getDesktop().browse(uri);
+                browserOpened = true;
                 enqueueMarkup("opened [yellow]" + uri + "[/]");
                 return;
             }
@@ -1282,6 +1284,7 @@ public class lazyslide implements Runnable {
             } else {
                 new ProcessBuilder("xdg-open", currentUrl()).start();
             }
+            browserOpened = true;
             enqueueMarkup("opened [yellow]" + currentUrl() + "[/]");
         } catch (Exception e) {
             enqueueMarkup("[red]could not open browser:[/] " + escapeMarkup(e.getMessage()));
@@ -1452,7 +1455,9 @@ public class lazyslide implements Runnable {
             }
             try {
                 startServer();
-                openPresentation();
+                if (!browserOpened) {
+                    openPresentation();
+                }
             } catch (IOException e) {
                 serving = false;
                 enqueueMarkup("[red]" + escapeMarkup(e.getMessage()) + "[/]");

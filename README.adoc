@@ -1,45 +1,39 @@
-= lazyslide
+= Lazy Slide
 :author: Max Rydahl Andersen
 
-image::./logo.png[lazyslide logo,300]
+image::./logo.png[lazyslide logo]
 :icons: font
 :source-highlighter: highlightjs
 :highlightjs-theme: https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.3/styles/atom-one-dark.min.css
 :highlightjs-languages: bash
 :revealjs_theme: dracula
-:revealjs_transition: slide
 :revealjs_hash: true
 :revealjs_history: true
 
 [%notitle]
 == lazyslide
 
-[.lead]
-A small JBang with TamboUI tool for writing presentations in AsciiDoc and rendering them to reveal.js.
+A tool for writing presentations lazily in text form.
 
 == What it does
 
+- Bootstrap new talks with `lazyslide init`
 - Render a deck from `index.adoc` or a directory of `.adoc` files
 - Watch source files and re-render on change
 - Serve the output locally
-- Show a Tamboui Toolkit dashboard while working
-- Bootstrap new talks with `lazyslide init`
+- TUI dashboard while working
 
 == Install
 
 Use https://www.jbang.dev[JBang] to install the `lazyslide` app:
 
-[source,bash]
-----
-jbang app install lazyslide@axandersen/lazyslide
-----
+`jbang app install lazyslide@maxandersen`
 
 == Bootstrap a new presentation
 
-[source,bash]
-----
-lazyslide init my-talk --title "Magic of Terminals" --author "Your Name"
-----
+`lazyslide init my-talk`
+
+{nbsp}
 
 Generated starter decks include:
 
@@ -49,53 +43,39 @@ Generated starter decks include:
 - `slides/img/`
 - `.gitignore`
 
-But you can also just create a single `index.adoc` file and start writing slides.
+You can also just create a single `index.adoc` file and start writing slides.
 
-== Render this repo's deck
+== Render slides
 
-Will look for index.adoc in the current directory, or the directory passed as an argument.
+`lazyslide render`
 
-If no index.adoc is found it will build up a virtual index.adoc that includes all the .adoc files in the current directory.
-
-[source,bash]
-----
-lazyslide render
-----
+Looks for `index.adoc` in the current directory or in the given path. If not found, it creates one that includes all `.adoc` files in the directory.
 
 Render a specific entrypoint:
 
-[source,bash]
-----
-lazyslide.java render index.adoc
-----
+`lazyslide render index.adoc`
 
 Render a directory of `.adoc` files:
 
-[source,bash]
-----
-lazyslide render docs/
-----
+`lazyslide render docs/`
 
-== Live preview
+== Serve with live reload
 
-[source,bash]
-----
-lazyslide serve
-----
+`lazyslide serve`
 
 That will:
 
 - render the deck
-- watch source files
 - serve the output over HTTP
-- open the browser on demand
+- watch source files
+- refres the browser on demand
 - show a inline dashboard in the terminal
 
 == Directory scanning
 
-When you pass a directory instead of a file, lazyslide scans it recursively for `.adoc` files and generates a virtual `index.adoc` that includes them all.
+Pass a directory to lazyslide to scan for `.adoc` files and auto-generate an `index.adoc`.
 
-If no argument is given, it looks for a `slides/` directory first, then `docs/`.
+No argument? It tries `slides/` first, then `docs/`.
 
 === File ordering
 
@@ -123,7 +103,7 @@ Any `.adoc` file whose name does *not* start with `.` or `_`.
 - Files inside hidden directories (`.git/`, `.asciidoctor/`, etc.)
 - Files inside the output directory
 
-Use the `_` prefix for reusable fragments that are included manually from other files but should not become their own section in the generated deck.
+Use the `_` prefix for reusable fragments that are included manually from  other files but should not become their own section in the generated deck.
 
 === Default attributes
 
